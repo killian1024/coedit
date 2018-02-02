@@ -14,7 +14,13 @@ namespace coedit {
 namespace tui {
 
 
-template<typename TpChar, std::size_t LINES_CACHE_SIZE, typename TpAllocator = std::allocator<int>>
+template<
+        typename TpChar,
+        std::size_t LINES_CACHE_SIZE,
+        std::size_t CHARACTERS_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        typename TpAllocator
+>
 class curses_interface
 {
 public:
@@ -23,7 +29,13 @@ public:
     template<typename T>
     using allocator_type = typename TpAllocator::template rebind<T>::other;
     
-    using file_editor_type = core::basic_file_editor<char_type, LINES_CACHE_SIZE, allocator_type<int>>;
+    using file_editor_type = core::basic_file_editor<
+            char_type,
+            LINES_CACHE_SIZE,
+            CHARACTERS_CACHE_SIZE,
+            CHARACTERS_BUFFER_SIZE,
+            allocator_type<int>
+    >;
     
     curses_interface(file_editor_type* file_editr, std::uint16_t fps)
             : file_editr_(file_editr)
@@ -52,6 +64,7 @@ public:
                     goto execution_finish;
                 }
             
+                file_editr_->handle_command(core::file_editor_command::INSERT, &inpt);
                 wprintw(win_, "%c", inpt);
                 chr_read = true;
             }
@@ -114,9 +127,29 @@ private:
 };
 
 
-template<class TpChar, std::size_t LINES_CACHE_SIZE, class TpAllocator>
-curses_interface(core::basic_file_editor<TpChar, LINES_CACHE_SIZE, TpAllocator>*, std::uint16_t)
-        -> curses_interface<TpChar, LINES_CACHE_SIZE, TpAllocator>;
+template<
+        typename TpChar,
+        std::size_t LINES_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        typename TpAllocator
+>
+curses_interface(
+        core::basic_file_editor<
+                TpChar,
+                LINES_CACHE_SIZE,
+                CHARACTERS_BUFFER_CACHE_SIZE,
+                CHARACTERS_BUFFER_SIZE,
+                TpAllocator
+        >*,
+        std::uint16_t
+) -> curses_interface<
+        TpChar,
+        LINES_CACHE_SIZE,
+        CHARACTERS_BUFFER_CACHE_SIZE,
+        CHARACTERS_BUFFER_SIZE,
+        TpAllocator
+>;
 
 
 }

@@ -7,14 +7,17 @@
 
 #include <cstdint>
 
+#define EMPTY (~0u)
+
 
 namespace coedit {
 namespace core {
 
 
 using lid_t = std::uint64_t;
+using loffset_t = std::uint64_t;
 using cbid_t = std::uint64_t;
-using cbid_offset_t = std::uint64_t;
+using cboffset_t = std::uint64_t;
 
 
 }

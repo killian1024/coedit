@@ -64,7 +64,7 @@ public:
                     goto execution_finish;
                 }
             
-                file_editr_->handle_command(core::file_editor_command::INSERT, &inpt);
+                file_editr_->insert_character(inpt);
                 wprintw(win_, "%c", inpt);
                 chr_read = true;
             }

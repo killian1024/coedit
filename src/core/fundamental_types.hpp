@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#define EMPTY (~0u)
+#define EMPTY (~0ull)
 
 
 namespace coedit {

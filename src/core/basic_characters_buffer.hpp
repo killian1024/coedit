@@ -5,6 +5,7 @@
 #ifndef COEDIT_CORE_BASIC_CHARACTERS_BUFFER_HPP
 #define COEDIT_CORE_BASIC_CHARACTERS_BUFFER_HPP
 
+#include "basic_characters_buffer_cache.hpp"
 #include "fundamental_types.hpp"
 
 
@@ -17,21 +18,29 @@ template<
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE
 >
+class basic_characters_buffer_cache;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_SIZE
+>
 class basic_characters_buffer
 {
 public:
-    using char_type = TpChar;
-    
-    using characters_buffer_type = basic_characters_buffer<
+    using self_type = basic_characters_buffer<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE
     >;
     
-    using characters_buffer_cache_type = kcontain::buffer_cache<
-            lid_t,
-            characters_buffer_type,
-            CHARACTERS_BUFFER_CACHE_SIZE
+    using char_type = TpChar;
+    
+    using characters_buffer_cache_type = basic_characters_buffer_cache<
+            TpChar,
+            CHARACTERS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_SIZE
     >;
     
     basic_characters_buffer()
@@ -70,6 +79,61 @@ public:
         
         buf_[offset] = ch;
         ++cur_size_;
+    }
+    
+    char_type& operator [](std::size_t i) noexcept
+    {
+        return buf_[i];
+    }
+    
+    cbid_t get_cbid() const
+    {
+        return cbid_;
+    }
+    
+    void set_cbid(cbid_t cbid)
+    {
+        cbid_ = cbid;
+    }
+    
+    cbid_t get_prev() const
+    {
+        return prev_;
+    }
+    
+    void set_prev(cbid_t prev)
+    {
+        prev_ = prev;
+    }
+    
+    cbid_t get_nxt() const
+    {
+        return nxt_;
+    }
+    
+    void set_nxt(cbid_t nxt)
+    {
+        nxt_ = nxt;
+    }
+    
+    cboffset_t get_cur_size() const
+    {
+        return cur_size_;
+    }
+    
+    void set_cur_size(cboffset_t cur_size)
+    {
+        cur_size_ = cur_size;
+    }
+    
+    characters_buffer_cache_type* get_chars_buf_cache() const
+    {
+        return chars_buf_cache_;
+    }
+    
+    void set_chars_buf_cache(characters_buffer_cache_type* chars_buf_cache)
+    {
+        chars_buf_cache_ = chars_buf_cache;
     }
 
 private:

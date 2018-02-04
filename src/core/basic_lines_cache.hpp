@@ -42,68 +42,75 @@ public:
     
     using line_type = basic_line<TpChar, CHARACTERS_BUFFER_CACHE_SIZE, CHARACTERS_BUFFER_SIZE>;
     
-    using lines_cache_type = kcontain::buffer_cache<lid_t, line_type, LINES_CACHE_SIZE>;
+    using cache_type = kcontain::buffer_cache<lid_t, line_type, LINES_CACHE_SIZE>;
     
-    using iterator = typename lines_cache_type::iterator;
+    using iterator = typename cache_type::iterator;
     
-    using const_iterator = typename lines_cache_type::const_iterator;
+    using const_iterator = typename cache_type::const_iterator;
     
-    basic_lines_cache()
-            : lnes_cache_()
-            , chars_buf_cache_()
-    {
-    }
+    basic_lines_cache() = default;
     
     inline iterator begin() noexcept
     {
-        return lnes_cache_.begin();
+        return cche_.begin();
     }
     
     inline const_iterator cbegin() const noexcept
     {
-        return lnes_cache_.cbegin();
+        return cche_.cbegin();
     }
     
     inline iterator end() noexcept
     {
-        return lnes_cache_.end();
+        return cche_.end();
     }
     
     inline const_iterator cend() const noexcept
     {
-        return lnes_cache_.cend();
+        return cche_.cend();
     }
     
-    void load_line(lid_t* lid)
+    iterator find(lid_t ky) noexcept
     {
-        if (*lid == EMPTY)
+        if (ky == EMPTY)
         {
-            *lid = get_new_lid();
-            insert_in_cache(*lid, line_type(*lid, EMPTY, EMPTY, EMPTY, 0, &chars_buf_cache_));
+            return cche_.end();
         }
+        
+        return cche_.find(ky);
     }
     
-    void insert_character(char_type ch, lid_t lid, loffset_t loffset)
+    template<typename TpValue_>
+    void insert(lid_t ky, TpValue_&& val)
     {
-        iterator it = find_in_cache(lid);
+        if (ky == EMPTY)
+        {
+            throw invalid_lid_exception();
+        }
         
+        cche_.insert(ky, std::forward<TpValue_>(val));
+    }
+    
+    line_type& get_line(lid_t lid)
+    {
+        iterator it = find(lid);
+    
         if (!it.end())
         {
-            it->insert_character(ch, loffset);
+            return *it;
         }
         else
         {
             throw invalid_lid_exception();
         }
     }
-
-private:
+    
     lid_t get_new_lid()
     {
         static lid_t old_lid = EMPTY;
         lid_t new_lid = old_lid;
         iterator it;
-    
+        
         do
         {
             ++new_lid;
@@ -113,10 +120,10 @@ private:
                 ++new_lid;
             }
             
-            it = find_in_cache(new_lid);
-        
+            it = find(new_lid);
+            
         } while (new_lid != old_lid && !it.end());
-    
+        
         if (new_lid == old_lid)
         {
             throw length_exception();
@@ -127,31 +134,8 @@ private:
         return new_lid;
     }
     
-    iterator find_in_cache(lid_t ky) noexcept
-    {
-        if (ky == EMPTY)
-        {
-            return lnes_cache_.end();
-        }
-        
-        return lnes_cache_.find(ky);
-    }
-    
-    template<typename TpValue_>
-    void insert_in_cache(lid_t ky, TpValue_&& val)
-    {
-        if (ky == EMPTY)
-        {
-            throw invalid_lid_exception();
-        }
-        
-        lnes_cache_.insert(ky, std::forward<TpValue_>(val));
-    }
-    
 private:
-    lines_cache_type lnes_cache_;
-    
-    characters_buffer_cache_type chars_buf_cache_;
+    cache_type cche_;
 };
 
 

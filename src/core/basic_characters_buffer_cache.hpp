@@ -34,61 +34,71 @@ public:
             CHARACTERS_BUFFER_SIZE
     >;
     
-    using characters_buffer_cache_type = kcontain::buffer_cache<
+    using cache_type = kcontain::buffer_cache<
             lid_t,
             characters_buffer_type,
             CHARACTERS_BUFFER_CACHE_SIZE
     >;
     
-    using iterator = typename characters_buffer_cache_type::iterator;
+    using iterator = typename cache_type::iterator;
     
-    using const_iterator = typename characters_buffer_cache_type::const_iterator;
+    using const_iterator = typename cache_type::const_iterator;
     
     inline iterator begin() noexcept
     {
-        return chars_buf_cache_.begin();
+        return cche_.begin();
     }
     
     inline const_iterator cbegin() const noexcept
     {
-        return chars_buf_cache_.cbegin();
+        return cche_.cbegin();
     }
     
     inline iterator end() noexcept
     {
-        return chars_buf_cache_.end();
+        return cche_.end();
     }
     
     inline const_iterator cend() const noexcept
     {
-        return chars_buf_cache_.cend();
+        return cche_.cend();
     }
     
-    void load_characters_buffer(cbid_t* cbid, cboffset_t* cboffset)
+    iterator find(cbid_t ky) noexcept
     {
-        if (*cbid == EMPTY)
+        if (ky == EMPTY)
         {
-            *cbid = get_new_cbid();
-            *cboffset = 0;
-            insert_in_cache(*cbid, characters_buffer_type(*cbid, EMPTY, EMPTY, &chars_buf_cache_));
+            return cche_.end();
         }
+        
+        return cche_.find(ky);
     }
     
-    void insert_character(char_type ch, cbid_t cbid, cboffset_t cboffset, loffset_t loffset)
+    template<typename TpValue_>
+    void insert(lid_t ky, TpValue_&& val)
     {
-        iterator it = find_in_cache(cbid);
+        if (ky == EMPTY)
+        {
+            throw invalid_cbid_exception();
+        }
+        
+        cche_.insert(ky, std::forward<TpValue_>(val));
+    }
+    
+    characters_buffer_type& get_character_buffer(cbid_t cbid)
+    {
+        iterator it = find(cbid);
         
         if (!it.end())
         {
-            it->insert_character(ch, cboffset, loffset);
+            return *it;
         }
         else
         {
             throw invalid_cbid_exception();
         }
     }
-
-private:
+    
     cbid_t get_new_cbid()
     {
         static cbid_t old_cbid = EMPTY;
@@ -104,7 +114,7 @@ private:
                 ++new_cbid;
             }
             
-            it = find_in_cache(new_cbid);
+            it = find(new_cbid);
             
         } while (new_cbid != old_cbid && !it.end());
         
@@ -118,29 +128,8 @@ private:
         return new_cbid;
     }
     
-    iterator find_in_cache(cbid_t ky) noexcept
-    {
-        if (ky == EMPTY)
-        {
-            return chars_buf_cache_.end();
-        }
-        
-        return chars_buf_cache_.find(ky);
-    }
-    
-    template<typename TpValue_>
-    void insert_in_cache(lid_t ky, TpValue_&& val)
-    {
-        if (ky == EMPTY)
-        {
-            throw invalid_cbid_exception();
-        }
-        
-        chars_buf_cache_.insert(ky, std::forward<TpValue_>(val));
-    }
-    
 private:
-    characters_buffer_cache_type chars_buf_cache_;
+    cache_type cche_;
 };
 
 

@@ -12,7 +12,7 @@ namespace core {
 
 enum class file_editor_command
 {
-    INSERT
+    NEW_LINE,
 };
 
 

@@ -48,6 +48,15 @@ class invalid_cbid_exception : public core_exception
 };
 
 
+class invalid_operation_exception : public core_exception
+{
+    char const* what() const noexcept override
+    {
+        return "invalid operation exception";
+    }
+};
+
+
 }
 }
 

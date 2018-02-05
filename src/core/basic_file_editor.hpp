@@ -41,7 +41,13 @@ public:
             CHARACTERS_BUFFER_SIZE
     >;
     
-    using line_type = basic_line<TpChar, CHARACTERS_BUFFER_CACHE_SIZE, CHARACTERS_BUFFER_SIZE>;
+    using line_type = basic_line<
+            TpChar,
+            LINES_CACHE_SIZE,
+            CHARACTERS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_SIZE,
+            TpAllocator
+    >;
     
     using lines_cache_type = basic_lines_cache<
             TpChar,
@@ -149,7 +155,7 @@ public:
         first_lid_ = current_lid_;
         first_display_lid_ = current_lid_;
         lnes_cache_.insert(current_lid_, line_type(
-                current_lid_, EMPTY, EMPTY, EMPTY, 0, &chars_buf_cache_));
+                current_lid_, EMPTY, EMPTY, &lnes_cache_, &chars_buf_cache_));
     }
     
     inline iterator begin() noexcept
@@ -182,8 +188,8 @@ public:
             lid_t new_lid = lnes_cache_.get_new_lid();
             
             lnes_cache_.insert(new_lid, line_type(
-                    new_lid, current_lne.get_lid(), current_lne.get_nxt(), EMPTY, 0,
-                    &chars_buf_cache_));
+                    new_lid, current_lne.get_lid(), current_lne.get_nxt(),
+                    &lnes_cache_, &chars_buf_cache_));
             
             if (current_lne.get_nxt() != EMPTY)
             {
@@ -216,7 +222,7 @@ private:
     
     loffset_t loffset_;
     
-    lid_t n_lnes_;
+    std::size_t n_lnes_;
 };
 
 

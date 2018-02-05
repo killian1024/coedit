@@ -16,6 +16,9 @@ int main(int argc, char* argv[])
     file_editr.handle_command(coedit::core::file_editor_command::NEW_LINE);
     file_editr.handle_command(coedit::core::file_editor_command::NEW_LINE);
     file_editr.insert_character(data++);
+    file_editr.handle_command(coedit::core::file_editor_command::NEW_LINE);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
     
     for (auto& line : file_editr)
     {

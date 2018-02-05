@@ -40,7 +40,13 @@ public:
             CHARACTERS_BUFFER_SIZE
     >;
     
-    using line_type = basic_line<TpChar, CHARACTERS_BUFFER_CACHE_SIZE, CHARACTERS_BUFFER_SIZE>;
+    using line_type = basic_line<
+            TpChar,
+            LINES_CACHE_SIZE,
+            CHARACTERS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_SIZE,
+            TpAllocator
+    >;
     
     using cache_type = kcontain::buffer_cache<lid_t, line_type, LINES_CACHE_SIZE>;
     

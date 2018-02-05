@@ -10,6 +10,7 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_characters_buffer_cache.hpp"
+#include "basic_lines_cache.hpp"
 #include "fundamental_types.hpp"
 #include "line_flags.hpp"
 
@@ -20,13 +21,36 @@ namespace core {
 
 template<
         typename TpChar,
+        std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        typename TpAllocator
+>
+class basic_lines_cache;
+
+
+template<
+        typename TpChar,
+        std::size_t LINES_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        typename TpAllocator
 >
 class basic_line
 {
 public:
+    using self_type = basic_line<
+            TpChar,
+            LINES_CACHE_SIZE,
+            CHARACTERS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_SIZE,
+            TpAllocator
+    >;
+    
     using char_type = TpChar;
+    
+    template<typename T>
+    using allocator_type = typename TpAllocator::template rebind<T>::other;
     
     using characters_buffer_type = basic_characters_buffer<
             TpChar,
@@ -38,6 +62,14 @@ public:
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE
+    >;
+    
+    using lines_cache_type = basic_lines_cache<
+            TpChar,
+            LINES_CACHE_SIZE,
+            CHARACTERS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_SIZE,
+            TpAllocator
     >;
     
     using flags_type = kcontain::flags<line_flags>;
@@ -151,6 +183,8 @@ public:
             , nxt_(EMPTY)
             , cbid_(EMPTY)
             , cboffset_(0)
+            , n_chars_(0)
+            , lnes_cache_(nullptr)
             , chars_buf_cache_(nullptr)
     {
     }
@@ -159,17 +193,34 @@ public:
             lid_t lid,
             lid_t prev,
             lid_t nxt,
-            cbid_t bid,
-            cboffset_t bid_offset,
+            lines_cache_type* lnes_cache,
             characters_buffer_cache_type* chars_cache
     )
             : lid_(lid)
             , prev_(prev)
             , nxt_(nxt)
-            , cbid_(bid)
-            , cboffset_(bid_offset)
+            , cbid_(EMPTY)
+            , cboffset_(0)
+            , n_chars_(0)
+            , lnes_cache_(lnes_cache)
             , chars_buf_cache_(chars_cache)
     {
+        if (prev_ == EMPTY)
+        {
+            cbid_ = chars_buf_cache_->get_new_cbid();
+            cboffset_ = 0;
+            chars_buf_cache_->insert(cbid_, characters_buffer_type(
+                    cbid_, EMPTY, EMPTY, chars_buf_cache_));
+        }
+        else
+        {
+            self_type& prev_lne = lnes_cache_->get_line(prev_);
+            characters_buffer_type& prev_cb =
+                    chars_buf_cache_->get_character_buffer(prev_lne.get_cbid());
+            
+            cbid_ = prev_cb.get_cbid();
+            cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
+        }
     }
     
     inline iterator begin() noexcept
@@ -191,16 +242,9 @@ public:
     
     void insert_character(char_type ch, loffset_t loffset)
     {
-        if (cbid_ == EMPTY)
-        {
-            cbid_ = chars_buf_cache_->get_new_cbid();
-            cboffset_ = 0;
-            chars_buf_cache_->insert(cbid_, characters_buffer_type(
-                    cbid_, EMPTY, EMPTY, chars_buf_cache_));
-        }
-    
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
         current_cb.insert_character(ch, cboffset_, loffset);
+        ++n_chars_;
     }
     
     lid_t get_lid() const
@@ -252,8 +296,22 @@ public:
     {
         cboffset_ = cboffset;
     }
+    
+    std::size_t get_n_chars() const
+    {
+        return n_chars_;
+    }
+    
+    void set_n_chars(std::size_t n_chars)
+    {
+        n_chars_ = n_chars;
+    }
 
 private:
+    lines_cache_type* lnes_cache_;
+    
+    characters_buffer_cache_type* chars_buf_cache_;
+    
     lid_t lid_;
     
     lid_t prev_;
@@ -264,7 +322,7 @@ private:
     
     cboffset_t cboffset_;
     
-    characters_buffer_cache_type* chars_buf_cache_;
+    std::size_t n_chars_;
 };
 
 

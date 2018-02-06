@@ -57,26 +57,23 @@ public:
             TpAllocator
     >;
     
-    class basic_file_editor_iterator
-            : public kcontain::i_mutable_iterator<
-                    line_type, basic_file_editor_iterator
-              >
+    class iterator : public kcontain::i_mutable_iterator<line_type, iterator>
     {
     public:
-        using self_type = basic_file_editor_iterator;
+        using self_type = iterator;
         
         using value_type = line_type;
         
         using node_type = lid_t;
     
-        basic_file_editor_iterator() noexcept
+        iterator() noexcept
                 : fir_(EMPTY)
                 , cur_(EMPTY)
                 , lnes_cache_(nullptr)
         {
         }
     
-        basic_file_editor_iterator(
+        iterator(
                 node_type fir,
                 node_type cur,
                 lines_cache_type* lnes_cache
@@ -140,8 +137,6 @@ public:
         lines_cache_type* lnes_cache_;
     };
     
-    using iterator = basic_file_editor_iterator;
-    
     basic_file_editor()
             : lnes_cache_()
             , chars_buf_cache_()
@@ -168,12 +163,37 @@ public:
         return iterator(EMPTY, EMPTY, &lnes_cache_);
     }
     
+    std::pair<std::size_t, std::size_t> get_cursor_position()
+    {
+        return std::make_pair(current_lid_, loffset_);
+    }
+    
     void handle_command(file_editor_command cmd)
     {
         switch (cmd)
         {
-            case file_editor_command::NEW_LINE:
+            case file_editor_command::NEWLINE:
                 insert_character(10);
+                break;
+                
+            case file_editor_command::BACKSPACE:
+                handle_backspace();
+                break;
+                
+            case file_editor_command::GO_LEFT:
+                handle_go_left();
+                break;
+    
+            case file_editor_command::GO_RIGHT:
+                handle_go_right();
+                break;
+            
+            case file_editor_command::GO_UP:
+                handle_go_up();
+                break;
+    
+            case file_editor_command::GO_DOWN:
+                handle_go_down();
                 break;
         }
     }
@@ -183,8 +203,15 @@ public:
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         current_lne.insert_character(ch, loffset_);
         
+        for (auto&& it = iterator(first_lid_, current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
+        {
+            it->set_cboffset(it->get_cboffset() + 1);
+        }
+        
         if (ch == 10)
         {
+            current_lne.set_n_chars(loffset_ + 1);
+            
             lid_t new_lid = lnes_cache_.get_new_lid();
             
             lnes_cache_.insert(new_lid, line_type(
@@ -206,6 +233,65 @@ public:
         else
         {
             ++loffset_;
+        }
+    }
+
+private:
+    void handle_backspace()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        
+        //if (current_lne.get_prev() != EMPTY || loffset_ != 0)
+        if (loffset_ > 0)
+        {
+            --loffset_;
+            current_lne.erase_character(loffset_);
+            
+            for (auto&& it = iterator(first_lid_, current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
+            {
+                it->set_cboffset(it->get_cboffset() - 1);
+            }
+        }
+    }
+    
+    void handle_go_left()
+    {
+        if (loffset_ > 0)
+        {
+            --loffset_;
+        }
+    }
+    
+    void handle_go_right()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        if (loffset_ - 1 < current_lne.get_n_chars())
+        {
+            ++loffset_;
+        }
+    }
+    
+    void handle_go_up()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        lid_t prev_lid = current_lne.get_prev();
+    
+        if (prev_lid != EMPTY)
+        {
+            current_lid_ = prev_lid;
+            loffset_ = 0;
+        }
+    }
+    
+    void handle_go_down()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        lid_t nxt_lid = current_lne.get_nxt();
+    
+        if (nxt_lid != EMPTY)
+        {
+            current_lid_ = nxt_lid;
+            loffset_ = 0;
         }
     }
 

@@ -49,28 +49,78 @@ public:
         init_curses();
     
         int inpt;
-        bool chr_read;
-        bool exit = false;
+        bool needs_refresh;
     
-        while (!exit)
+        while (true)
         {
-            chr_read = false;
+            needs_refresh = false;
         
             while ((inpt = wgetch(win_)) != ERR)
             {
-                if (inpt == 48)
+                switch(inpt)
                 {
-                    exit = true;
-                    goto execution_finish;
+                    case 48:
+                        goto execution_finish;
+    
+                    case KEY_ENTER:
+                        file_editr_->handle_command(core::file_editor_command::NEWLINE);
+                        needs_refresh = true;
+                        break;
+    
+                    case KEY_BACKSPACE:
+                        file_editr_->handle_command(core::file_editor_command::BACKSPACE);
+                        needs_refresh = true;
+                        break;
+    
+                    case KEY_LEFT:
+                        file_editr_->handle_command(core::file_editor_command::GO_LEFT);
+                        needs_refresh = true;
+                        break;
+    
+                    case KEY_RIGHT:
+                        file_editr_->handle_command(core::file_editor_command::GO_RIGHT);
+                        needs_refresh = true;
+                        break;
+    
+                    case KEY_UP:
+                        file_editr_->handle_command(core::file_editor_command::GO_UP);
+                        needs_refresh = true;
+                        break;
+    
+                    case KEY_DOWN:
+                        file_editr_->handle_command(core::file_editor_command::GO_DOWN);
+                        needs_refresh = true;
+                        break;
+    
+                    default:
+                        file_editr_->insert_character(inpt);
+                        needs_refresh = true;
+                        break;
                 }
-            
-                file_editr_->insert_character(inpt);
-                wprintw(win_, "%c", inpt);
-                chr_read = true;
             }
         
-            if (chr_read)
+            if (needs_refresh)
             {
+                std::size_t i;
+                std::size_t j;
+                auto cursor_pos = file_editr_->get_cursor_position();
+                
+                clear();
+                
+                i = 0;
+                for (auto& line : *file_editr_)
+                {
+                    j = 0;
+                    for (auto& ch : line)
+                    {
+                        mvwprintw(win_, i, j, "%c", ch);
+                        ++j;
+                    }
+                    
+                    ++i;
+                }
+    
+                wmove(win_, cursor_pos.first, cursor_pos.second);
                 wrefresh(win_);
             }
         
@@ -80,8 +130,6 @@ public:
         execution_finish:
     
         end_curses();
-    
-        ksys::kbhit("Curses terminated...\n");
     
         return 0;
     }
@@ -103,6 +151,10 @@ private:
     
         // Hace que la entrada del teclado no aparezca en la pantalla.
         noecho();
+        
+        // El cursor físico estará posicionado en el mismo lugar que el cursor lógico después de un
+        //  refresh.
+        leaveok(win_, false);
     
         // Verificar si la terminal soporta la utilización de colores.
         if(has_colors())

@@ -74,26 +74,23 @@ public:
     
     using flags_type = kcontain::flags<line_flags>;
     
-    class basic_line_iterator
-            : public kcontain::i_mutable_iterator<
-                    char_type, basic_line_iterator
-              >
+    class iterator : public kcontain::i_mutable_iterator<char_type, iterator>
     {
     public:
-        using self_type = basic_line_iterator;
+        using self_type = iterator;
         
         using value_type = char_type;
         
         using node_type = std::pair<cbid_t, cboffset_t>;
     
-        basic_line_iterator() noexcept
+        iterator() noexcept
                 : fir_({EMPTY, 0})
                 , cur_({EMPTY, 0})
                 , chars_buf_cache_(nullptr)
         {
         }
     
-        basic_line_iterator(
+        iterator(
                 node_type fir,
                 node_type cur,
                 characters_buffer_cache_type* chars_buf_cache
@@ -175,8 +172,6 @@ public:
         characters_buffer_cache_type* chars_buf_cache_;
     };
     
-    using iterator = basic_line_iterator;
-    
     basic_line()
             : lid_(EMPTY)
             , prev_(EMPTY)
@@ -245,6 +240,13 @@ public:
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
         current_cb.insert_character(ch, cboffset_, loffset);
         ++n_chars_;
+    }
+    
+    void erase_character(loffset_t loffset)
+    {
+        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        current_cb.erase_character(cboffset_, loffset);
+        --n_chars_;
     }
     
     lid_t get_lid() const

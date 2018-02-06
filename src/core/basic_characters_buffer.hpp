@@ -81,6 +81,22 @@ public:
         ++cur_size_;
     }
     
+    void erase_character(cboffset_t cboffset, loffset_t loffset)
+    {
+        auto offset = cboffset + loffset;
+    
+        if (cur_size_ > 0)
+        {
+            if (offset + 1 < cur_size_)
+            {
+                memcpy((buf_ + offset), (buf_ + offset + 1),
+                       (cur_size_ - offset - 1) * sizeof(char_type));
+            }
+            
+            --cur_size_;
+        }
+    }
+    
     char_type& operator [](std::size_t i) noexcept
     {
         return buf_[i];

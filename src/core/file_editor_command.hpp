@@ -12,7 +12,12 @@ namespace core {
 
 enum class file_editor_command
 {
-    NEW_LINE,
+    NEWLINE,
+    BACKSPACE,
+    GO_LEFT,
+    GO_RIGHT,
+    GO_UP,
+    GO_DOWN
 };
 
 

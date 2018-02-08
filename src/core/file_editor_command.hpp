@@ -17,7 +17,9 @@ enum class file_editor_command
     GO_LEFT,
     GO_RIGHT,
     GO_UP,
-    GO_DOWN
+    GO_DOWN,
+    HOME,
+    END
 };
 
 

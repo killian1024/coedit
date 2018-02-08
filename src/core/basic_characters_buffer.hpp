@@ -97,6 +97,28 @@ public:
         }
     }
     
+    cboffset_t get_line_length(cboffset_t cboffset)
+    {
+        cboffset_t i = 0;
+        
+        while (buf_[cboffset] != LF && buf_[cboffset] != CR && cboffset < cur_size_)
+        {
+            ++i;
+            ++cboffset;
+        }
+        
+        if (cboffset < cur_size_)
+        {
+            ++i;
+            if (buf_[cboffset] == CR && buf_[cboffset + 1] == LF)
+            {
+                ++i;
+            }
+        }
+    
+        return i;
+    }
+    
     char_type& operator [](std::size_t i) noexcept
     {
         return buf_[i];

@@ -92,6 +92,16 @@ public:
                         needs_refresh = true;
                         break;
     
+                    case KEY_HOME:
+                        file_editr_->handle_command(core::file_editor_command::HOME);
+                        needs_refresh = true;
+                        break;
+    
+                    case KEY_END:
+                        file_editr_->handle_command(core::file_editor_command::END);
+                        needs_refresh = true;
+                        break;
+    
                     default:
                         file_editr_->insert_character(inpt);
                         needs_refresh = true;
@@ -103,7 +113,7 @@ public:
             {
                 std::size_t i;
                 std::size_t j;
-                auto cursor_pos = file_editr_->get_cursor_position();
+                auto cursr = file_editr_->get_cursor_position();
                 
                 clear();
                 
@@ -120,7 +130,7 @@ public:
                     ++i;
                 }
     
-                wmove(win_, cursor_pos.first, cursor_pos.second);
+                wmove(win_, cursr.coffset, cursr.loffset);
                 wrefresh(win_);
             }
         
@@ -152,7 +162,7 @@ private:
         // Hace que la entrada del teclado no aparezca en la pantalla.
         noecho();
         
-        // El cursor físico estará posicionado en el mismo lugar que el cursor lógico después de un
+        // El cursor_offset físico estará posicionado en el mismo lugar que el cursor_offset lógico después de un
         //  refresh.
         leaveok(win_, false);
     

@@ -8,6 +8,8 @@
 #include <cstdint>
 
 #define EMPTY (~0ull)
+#define LF (0xA)
+#define CR (0xD)
 
 
 namespace coedit {
@@ -16,6 +18,7 @@ namespace core {
 
 using lid_t = std::uint64_t;
 using loffset_t = std::uint64_t;
+using coffset_t = std::uint64_t;
 using cbid_t = std::uint64_t;
 using cboffset_t = std::uint64_t;
 

@@ -84,19 +84,16 @@ public:
         using node_type = std::pair<cbid_t, cboffset_t>;
     
         iterator() noexcept
-                : fir_({EMPTY, 0})
-                , cur_({EMPTY, 0})
+                : cur_({EMPTY, 0})
                 , chars_buf_cache_(nullptr)
         {
         }
     
         iterator(
-                node_type fir,
                 node_type cur,
                 characters_buffer_cache_type* chars_buf_cache
         ) noexcept
-                : fir_(std::move(fir))
-                , cur_(std::move(cur))
+                : cur_(std::move(cur))
                 , chars_buf_cache_(chars_buf_cache)
         {
         }
@@ -116,7 +113,7 @@ public:
                 ++cur_.second;
             }
     
-            if (current_cb[cur_.second] == 10)
+            if (current_cb[cur_.second] == LF || current_cb[cur_.second] == CR)
             {
                 cur_.first = EMPTY;
                 cur_.second = 0;
@@ -165,8 +162,6 @@ public:
         friend class basic_file_editor;
     
     protected:
-        node_type fir_;
-        
         node_type cur_;
     
         characters_buffer_cache_type* chars_buf_cache_;
@@ -215,6 +210,7 @@ public:
             
             cbid_ = prev_cb.get_cbid();
             cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
+            n_chars_ = prev_cb.get_line_length(cboffset_);
         }
     }
     
@@ -222,17 +218,17 @@ public:
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
     
-        if (current_cb[cboffset_] == 10)
+        if (current_cb[cboffset_] == LF)
         {
             return end();
         }
         
-        return iterator({cbid_, cboffset_}, {cbid_, cboffset_}, chars_buf_cache_);
+        return iterator({cbid_, cboffset_}, chars_buf_cache_);
     }
     
     inline iterator end() noexcept
     {
-        return iterator({EMPTY, 0}, {EMPTY, 0}, chars_buf_cache_);
+        return iterator({EMPTY, 0}, chars_buf_cache_);
     }
     
     void insert_character(char_type ch, loffset_t loffset)
@@ -247,6 +243,25 @@ public:
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
         current_cb.erase_character(cboffset_, loffset);
         --n_chars_;
+    }
+    
+    bool can_go_left(loffset_t loffset)
+    {
+        return loffset > 0;
+    }
+    
+    bool can_go_right(loffset_t loffset)
+    {
+        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        auto val = current_cb[cboffset_ + loffset];
+        
+        return val != LF && val != CR && (nxt_ != EMPTY || loffset < n_chars_);
+    }
+    
+    cboffset_t get_line_length()
+    {
+        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        return current_cb.get_line_length(cboffset_);
     }
     
     lid_t get_lid() const

@@ -15,7 +15,7 @@ set(SOURCE_FILES
         src/core/basic_file_editor.hpp
         src/tui/curses_interface.hpp
         src/core/basic_line.hpp
-        src/core/fundamental_types.hpp src/core/basic_lines_cache.hpp src/core/basic_characters_buffer.hpp src/core/basic_characters_buffer_cache.hpp src/core/file_editor_command.hpp src/core/core_exception.hpp src/core/line_flags.hpp)
+        src/core/fundamental_types.hpp src/core/basic_lines_cache.hpp src/core/basic_characters_buffer.hpp src/core/basic_characters_buffer_cache.hpp src/core/file_editor_command.hpp src/core/core_exception.hpp src/core/line_flags.hpp src/core/newline_format.hpp src/core/cursor.hpp)
 
 add_executable(coedit ${SOURCE_FILES})
 

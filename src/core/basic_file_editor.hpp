@@ -12,8 +12,10 @@
 #include "basic_characters_buffer_cache.hpp"
 #include "basic_lines_cache.hpp"
 #include "core_exception.hpp"
+#include "cursor.hpp"
 #include "file_editor_command.hpp"
 #include "fundamental_types.hpp"
+#include "newline_format.hpp"
 
 
 namespace coedit {
@@ -67,19 +69,16 @@ public:
         using node_type = lid_t;
     
         iterator() noexcept
-                : fir_(EMPTY)
-                , cur_(EMPTY)
+                : cur_(EMPTY)
                 , lnes_cache_(nullptr)
         {
         }
     
         iterator(
-                node_type fir,
                 node_type cur,
                 lines_cache_type* lnes_cache
         ) noexcept
-                : fir_(fir)
-                , cur_(cur)
+                : cur_(cur)
                 , lnes_cache_(lnes_cache)
         {
         }
@@ -130,21 +129,20 @@ public:
         friend class basic_file_editor;
     
     protected:
-        node_type fir_;
-        
         node_type cur_;
     
         lines_cache_type* lnes_cache_;
     };
     
-    basic_file_editor()
+    basic_file_editor(newline_format newl_format)
             : lnes_cache_()
             , chars_buf_cache_()
             , first_lid_(EMPTY)
             , current_lid_(EMPTY)
+            , cursr_({0, 0})
             , first_display_lid_(EMPTY)
-            , loffset_(0)
             , n_lnes_(1)
+            , newl_format_(newl_format)
     {
         current_lid_ = lnes_cache_.get_new_lid();
         first_lid_ = current_lid_;
@@ -155,123 +153,168 @@ public:
     
     inline iterator begin() noexcept
     {
-        return iterator(first_lid_, first_display_lid_, &lnes_cache_);
+        return iterator(first_lid_, &lnes_cache_);
     }
     
     inline iterator end() noexcept
     {
-        return iterator(EMPTY, EMPTY, &lnes_cache_);
+        return iterator(EMPTY, &lnes_cache_);
     }
     
-    std::pair<std::size_t, std::size_t> get_cursor_position()
-    {
-        return std::make_pair(current_lid_, loffset_);
-    }
-    
-    void handle_command(file_editor_command cmd)
+    bool handle_command(file_editor_command cmd)
     {
         switch (cmd)
         {
             case file_editor_command::NEWLINE:
-                insert_character(10);
-                break;
+                return handle_newline();
                 
             case file_editor_command::BACKSPACE:
-                handle_backspace();
-                break;
+                return handle_backspace();
                 
             case file_editor_command::GO_LEFT:
-                handle_go_left();
-                break;
+                return handle_go_left();
     
             case file_editor_command::GO_RIGHT:
-                handle_go_right();
-                break;
+                return handle_go_right();
             
             case file_editor_command::GO_UP:
-                handle_go_up();
-                break;
+                return handle_go_up();
     
             case file_editor_command::GO_DOWN:
-                handle_go_down();
-                break;
+                return handle_go_down();
+    
+            case file_editor_command::HOME:
+                return handle_home();
+    
+            case file_editor_command::END:
+                return handle_end();
         }
     }
     
     void insert_character(char_type ch)
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
-        current_lne.insert_character(ch, loffset_);
-        
-        for (auto&& it = iterator(first_lid_, current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
+        if (ch == LF || ch == CR)
         {
-            it->set_cboffset(it->get_cboffset() + 1);
-        }
-        
-        if (ch == 10)
-        {
-            current_lne.set_n_chars(loffset_ + 1);
-            
-            lid_t new_lid = lnes_cache_.get_new_lid();
-            
-            lnes_cache_.insert(new_lid, line_type(
-                    new_lid, current_lne.get_lid(), current_lne.get_nxt(),
-                    &lnes_cache_, &chars_buf_cache_));
-            
-            if (current_lne.get_nxt() != EMPTY)
-            {
-                line_type& nxt_lne = lnes_cache_.get_line(current_lne.get_nxt());
-                nxt_lne.set_prev(new_lid);
-            }
-            
-            current_lne.set_nxt(new_lid);
-            
-            current_lid_ = new_lid;
-            loffset_ = 0;
-            ++n_lnes_;
+            handle_newline();
         }
         else
         {
-            ++loffset_;
+            raw_insert_character(ch);
+            ++cursr_.loffset;
         }
+    }
+    
+    const cursor& get_cursor_position()
+    {
+        return cursr_;
     }
 
 private:
-    void handle_backspace()
+    bool handle_newline()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        
+        switch (newl_format_)
+        {
+            case newline_format::UNIX:
+                raw_insert_character(LF);
+                break;
+            
+            case newline_format::MAC:
+                raw_insert_character(CR);
+                break;
+            
+            case newline_format::WINDOWS:
+                raw_insert_character(CR);
+                ++cursr_.loffset;
+                raw_insert_character(LF);
+                break;
+        }
+        
+        current_lne.set_n_chars(cursr_.loffset + 1);
+        
+        lid_t new_lid = lnes_cache_.get_new_lid();
+        
+        lnes_cache_.insert(new_lid, line_type(
+                new_lid, current_lne.get_lid(), current_lne.get_nxt(),
+                &lnes_cache_, &chars_buf_cache_));
+        
+        if (current_lne.get_nxt() != EMPTY)
+        {
+            line_type& nxt_lne = lnes_cache_.get_line(current_lne.get_nxt());
+            nxt_lne.set_prev(new_lid);
+        }
+        
+        current_lne.set_nxt(new_lid);
+        
+        current_lid_ = new_lid;
+        cursr_.loffset = 0;
+        ++n_lnes_;
+        ++cursr_.coffset;
+        
+        return true;
+    }
+    
+    bool handle_backspace()
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         
         //if (current_lne.get_prev() != EMPTY || loffset_ != 0)
-        if (loffset_ > 0)
+        if (cursr_.loffset > 0)
         {
-            --loffset_;
-            current_lne.erase_character(loffset_);
+            --cursr_.loffset;
+            current_lne.erase_character(cursr_.loffset);
             
-            for (auto&& it = iterator(first_lid_, current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
+            for (auto&& it = iterator(current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
             {
                 it->set_cboffset(it->get_cboffset() - 1);
             }
+            
+            return true;
         }
+        
+        return false;
     }
     
-    void handle_go_left()
-    {
-        if (loffset_ > 0)
-        {
-            --loffset_;
-        }
-    }
-    
-    void handle_go_right()
+    bool handle_go_left()
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
-        if (loffset_ - 1 < current_lne.get_n_chars())
+        
+        if (current_lne.can_go_left(cursr_.loffset))
         {
-            ++loffset_;
+            --cursr_.loffset;
+            return true;
         }
+        else if (current_lid_ != first_lid_ && handle_go_up() && handle_end())
+        {
+            return true;
+        }
+        
+        return false;
     }
     
-    void handle_go_up()
+    bool handle_go_right()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        
+        if (current_lne.can_go_right(cursr_.loffset))
+        {
+            ++cursr_.loffset;
+            return true;
+        }
+        else
+        {
+            if (handle_go_down())
+            {
+                cursr_.loffset = 0;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    bool handle_go_up()
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         lid_t prev_lid = current_lne.get_prev();
@@ -279,11 +322,20 @@ private:
         if (prev_lid != EMPTY)
         {
             current_lid_ = prev_lid;
-            loffset_ = 0;
+            cursr_.loffset = 0;
+            
+            if (cursr_.coffset > 0)
+            {
+                --cursr_.coffset;
+            }
+            
+            return true;
         }
+        
+        return false;
     }
     
-    void handle_go_down()
+    bool handle_go_down()
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         lid_t nxt_lid = current_lne.get_nxt();
@@ -291,7 +343,48 @@ private:
         if (nxt_lid != EMPTY)
         {
             current_lid_ = nxt_lid;
-            loffset_ = 0;
+            cursr_.loffset = 0;
+            
+            // todo : get window size to check here
+            if (cursr_.coffset < ~0)
+            {
+                ++cursr_.coffset;
+            }
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    bool handle_home()
+    {
+        cursr_.loffset = 0;
+        return true;
+    }
+    
+    bool handle_end()
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        bool done = false;
+        
+        while (current_lne.can_go_right(cursr_.loffset))
+        {
+            ++cursr_.loffset;
+            done = true;
+        }
+        
+        return done;
+    }
+    
+    void raw_insert_character(char_type ch)
+    {
+        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        current_lne.insert_character(ch, cursr_.loffset);
+    
+        for (auto&& it = iterator(current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
+        {
+            it->set_cboffset(it->get_cboffset() + 1);
         }
     }
 
@@ -304,11 +397,13 @@ private:
     
     lid_t current_lid_;
     
+    cursor cursr_;
+    
     lid_t first_display_lid_;
     
-    loffset_t loffset_;
-    
     std::size_t n_lnes_;
+    
+    newline_format newl_format_;
 };
 
 

@@ -23,6 +23,9 @@ enum class file_editor_command
 };
 
 
+using fec_t = file_editor_command;
+
+
 }
 }
 

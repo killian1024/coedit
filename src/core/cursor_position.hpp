@@ -2,8 +2,8 @@
 // Created by Killian on 08/02/18.
 //
 
-#ifndef COEDIT_CORE_CURSOR_HPP
-#define COEDIT_CORE_CURSOR_HPP
+#ifndef COEDIT_CORE_CURSOR_POSITION_HPP
+#define COEDIT_CORE_CURSOR_POSITION_HPP
 
 #include "fundamental_types.hpp"
 
@@ -12,7 +12,7 @@ namespace coedit {
 namespace core {
 
 
-struct cursor
+struct cursor_position
 {
     loffset_t loffset;
     coffset_t coffset;

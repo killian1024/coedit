@@ -210,7 +210,7 @@ public:
             
             cbid_ = prev_cb.get_cbid();
             cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
-            n_chars_ = prev_cb.get_line_length(cboffset_);
+            n_chars_ = prev_cb.compute_n_chars(cboffset_);
         }
     }
     
@@ -234,15 +234,62 @@ public:
     void insert_character(char_type ch, loffset_t loffset)
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        lid_t current_nxt_lid = nxt_;
+        self_type* nxt_lne;
+        
         current_cb.insert_character(ch, cboffset_, loffset);
         ++n_chars_;
+        
+        while (current_nxt_lid != EMPTY)
+        {
+            nxt_lne = &(lnes_cache_->get_line(current_nxt_lid));
+            nxt_lne->increment_cboffset(1);
+            current_nxt_lid = nxt_lne->get_nxt();
+        }
     }
     
     void erase_character(loffset_t loffset)
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        lid_t current_nxt_lid = nxt_;
+        self_type* nxt_lne;
+        
         current_cb.erase_character(cboffset_, loffset);
         --n_chars_;
+    
+        while (current_nxt_lid != EMPTY)
+        {
+            nxt_lne = &(lnes_cache_->get_line(current_nxt_lid));
+            nxt_lne->increment_cboffset(~(lid_t)0);
+            current_nxt_lid = nxt_lne->get_nxt();
+        }
+    }
+    
+    void merge_with_next_line()
+    {
+        if (nxt_ == EMPTY)
+        {
+            throw invalid_operation_exception();
+        }
+    
+        self_type* nxt_lne = &(lnes_cache_->get_line(nxt_));
+        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        
+        if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
+        {
+            erase_character(n_chars_ - 1);
+        }
+        
+        erase_character(n_chars_ - 1);
+        
+        nxt_ = nxt_lne->get_nxt();
+        n_chars_ += nxt_lne->get_n_chars();
+        
+        if (nxt_ != EMPTY)
+        {
+            nxt_lne = &(lnes_cache_->get_line(nxt_));
+            nxt_lne->set_prev(lid_);
+        }
     }
     
     bool can_go_left(loffset_t loffset)
@@ -258,10 +305,25 @@ public:
         return val != LF && val != CR && (nxt_ != EMPTY || loffset < n_chars_);
     }
     
-    cboffset_t get_line_length()
+    std::size_t get_line_length()
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
-        return current_cb.get_line_length(cboffset_);
+        
+        if (n_chars_ > 0)
+        {
+            auto val = current_cb[cboffset_ + n_chars_ - 1];
+            
+            if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
+            {
+                return n_chars_ - 2;
+            }
+            else if (current_cb[cboffset_ + n_chars_ - 1] == LF)
+            {
+                return n_chars_ - 1;
+            }
+        }
+        
+        return n_chars_;
     }
     
     lid_t get_lid() const
@@ -312,6 +374,11 @@ public:
     void set_cboffset(cboffset_t cboffset)
     {
         cboffset_ = cboffset;
+    }
+    
+    void increment_cboffset(cboffset_t cboffset)
+    {
+        cboffset_ += cboffset;
     }
     
     std::size_t get_n_chars() const

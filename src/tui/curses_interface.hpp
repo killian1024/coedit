@@ -63,42 +63,42 @@ public:
                         goto execution_finish;
     
                     case KEY_ENTER:
-                        file_editr_->handle_command(core::file_editor_command::NEWLINE);
+                        file_editr_->handle_command(core::fec_t::NEWLINE);
                         needs_refresh = true;
                         break;
     
                     case KEY_BACKSPACE:
-                        file_editr_->handle_command(core::file_editor_command::BACKSPACE);
+                        file_editr_->handle_command(core::fec_t::BACKSPACE);
                         needs_refresh = true;
                         break;
     
                     case KEY_LEFT:
-                        file_editr_->handle_command(core::file_editor_command::GO_LEFT);
+                        file_editr_->handle_command(core::fec_t::GO_LEFT);
                         needs_refresh = true;
                         break;
     
                     case KEY_RIGHT:
-                        file_editr_->handle_command(core::file_editor_command::GO_RIGHT);
+                        file_editr_->handle_command(core::fec_t::GO_RIGHT);
                         needs_refresh = true;
                         break;
     
                     case KEY_UP:
-                        file_editr_->handle_command(core::file_editor_command::GO_UP);
+                        file_editr_->handle_command(core::fec_t::GO_UP);
                         needs_refresh = true;
                         break;
     
                     case KEY_DOWN:
-                        file_editr_->handle_command(core::file_editor_command::GO_DOWN);
+                        file_editr_->handle_command(core::fec_t::GO_DOWN);
                         needs_refresh = true;
                         break;
     
                     case KEY_HOME:
-                        file_editr_->handle_command(core::file_editor_command::HOME);
+                        file_editr_->handle_command(core::fec_t::HOME);
                         needs_refresh = true;
                         break;
     
                     case KEY_END:
-                        file_editr_->handle_command(core::file_editor_command::END);
+                        file_editr_->handle_command(core::fec_t::END);
                         needs_refresh = true;
                         break;
     

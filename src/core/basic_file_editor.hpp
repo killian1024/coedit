@@ -12,7 +12,7 @@
 #include "basic_characters_buffer_cache.hpp"
 #include "basic_lines_cache.hpp"
 #include "core_exception.hpp"
-#include "cursor.hpp"
+#include "cursor_position.hpp"
 #include "file_editor_command.hpp"
 #include "fundamental_types.hpp"
 #include "newline_format.hpp"
@@ -139,7 +139,7 @@ public:
             , chars_buf_cache_()
             , first_lid_(EMPTY)
             , current_lid_(EMPTY)
-            , cursr_({0, 0})
+            , cursor_pos_({0, 0})
             , first_display_lid_(EMPTY)
             , n_lnes_(1)
             , newl_format_(newl_format)
@@ -199,14 +199,15 @@ public:
         }
         else
         {
-            raw_insert_character(ch);
-            ++cursr_.loffset;
+            line_type& current_lne = lnes_cache_.get_line(current_lid_);
+            current_lne.insert_character(ch, cursor_pos_.loffset);
+            ++cursor_pos_.loffset;
         }
     }
     
-    const cursor& get_cursor_position()
+    const cursor_position& get_cursor_position()
     {
-        return cursr_;
+        return cursor_pos_;
     }
 
 private:
@@ -217,21 +218,21 @@ private:
         switch (newl_format_)
         {
             case newline_format::UNIX:
-                raw_insert_character(LF);
+                current_lne.insert_character(LF, cursor_pos_.loffset);
                 break;
             
             case newline_format::MAC:
-                raw_insert_character(CR);
+                current_lne.insert_character(CR, cursor_pos_.loffset);
                 break;
             
             case newline_format::WINDOWS:
-                raw_insert_character(CR);
-                ++cursr_.loffset;
-                raw_insert_character(LF);
+                current_lne.insert_character(CR, cursor_pos_.loffset);
+                ++cursor_pos_.loffset;
+                current_lne.insert_character(LF, cursor_pos_.loffset);
                 break;
         }
         
-        current_lne.set_n_chars(cursr_.loffset + 1);
+        current_lne.set_n_chars(cursor_pos_.loffset + 1);
         
         lid_t new_lid = lnes_cache_.get_new_lid();
         
@@ -248,9 +249,9 @@ private:
         current_lne.set_nxt(new_lid);
         
         current_lid_ = new_lid;
-        cursr_.loffset = 0;
+        cursor_pos_.loffset = 0;
         ++n_lnes_;
-        ++cursr_.coffset;
+        ++cursor_pos_.coffset;
         
         return true;
     }
@@ -258,17 +259,34 @@ private:
     bool handle_backspace()
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        lid_t prev_lid = current_lne.get_prev();
         
-        //if (current_lne.get_prev() != EMPTY || loffset_ != 0)
-        if (cursr_.loffset > 0)
+        if (cursor_pos_.loffset > 0)
         {
-            --cursr_.loffset;
-            current_lne.erase_character(cursr_.loffset);
+            --cursor_pos_.loffset;
+            current_lne.erase_character(cursor_pos_.loffset);
             
-            for (auto&& it = iterator(current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
+            return true;
+        }
+        else if (prev_lid != EMPTY)
+        {
+            line_type& previous_lne = lnes_cache_.get_line(prev_lid);
+            auto prev_lne_length = previous_lne.get_line_length();
+            
+            previous_lne.merge_with_next_line();
+            
+            if (first_display_lid_ == current_lid_)
             {
-                it->set_cboffset(it->get_cboffset() - 1);
+                first_display_lid_ = prev_lid;
             }
+            current_lid_ = prev_lid;
+            
+            --n_lnes_;
+            if (cursor_pos_.coffset > 0)
+            {
+                --cursor_pos_.coffset;
+            }
+            cursor_pos_.loffset = prev_lne_length;
             
             return true;
         }
@@ -280,9 +298,9 @@ private:
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         
-        if (current_lne.can_go_left(cursr_.loffset))
+        if (current_lne.can_go_left(cursor_pos_.loffset))
         {
-            --cursr_.loffset;
+            --cursor_pos_.loffset;
             return true;
         }
         else if (current_lid_ != first_lid_ && handle_go_up() && handle_end())
@@ -297,16 +315,16 @@ private:
     {
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         
-        if (current_lne.can_go_right(cursr_.loffset))
+        if (current_lne.can_go_right(cursor_pos_.loffset))
         {
-            ++cursr_.loffset;
+            ++cursor_pos_.loffset;
             return true;
         }
         else
         {
             if (handle_go_down())
             {
-                cursr_.loffset = 0;
+                cursor_pos_.loffset = 0;
                 return true;
             }
         }
@@ -322,11 +340,11 @@ private:
         if (prev_lid != EMPTY)
         {
             current_lid_ = prev_lid;
-            cursr_.loffset = 0;
+            cursor_pos_.loffset = 0;
             
-            if (cursr_.coffset > 0)
+            if (cursor_pos_.coffset > 0)
             {
-                --cursr_.coffset;
+                --cursor_pos_.coffset;
             }
             
             return true;
@@ -343,12 +361,12 @@ private:
         if (nxt_lid != EMPTY)
         {
             current_lid_ = nxt_lid;
-            cursr_.loffset = 0;
+            cursor_pos_.loffset = 0;
             
             // todo : get window size to check here
-            if (cursr_.coffset < ~0)
+            if (cursor_pos_.coffset < ~0)
             {
-                ++cursr_.coffset;
+                ++cursor_pos_.coffset;
             }
             
             return true;
@@ -359,7 +377,7 @@ private:
     
     bool handle_home()
     {
-        cursr_.loffset = 0;
+        cursor_pos_.loffset = 0;
         return true;
     }
     
@@ -368,24 +386,13 @@ private:
         line_type& current_lne = lnes_cache_.get_line(current_lid_);
         bool done = false;
         
-        while (current_lne.can_go_right(cursr_.loffset))
+        while (current_lne.can_go_right(cursor_pos_.loffset))
         {
-            ++cursr_.loffset;
+            ++cursor_pos_.loffset;
             done = true;
         }
         
         return done;
-    }
-    
-    void raw_insert_character(char_type ch)
-    {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
-        current_lne.insert_character(ch, cursr_.loffset);
-    
-        for (auto&& it = iterator(current_lid_, &lnes_cache_) + 1; !it.end(); ++it)
-        {
-            it->set_cboffset(it->get_cboffset() + 1);
-        }
     }
 
 private:
@@ -397,7 +404,7 @@ private:
     
     lid_t current_lid_;
     
-    cursor cursr_;
+    cursor_position cursor_pos_;
     
     lid_t first_display_lid_;
     

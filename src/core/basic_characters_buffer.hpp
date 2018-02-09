@@ -97,7 +97,7 @@ public:
         }
     }
     
-    cboffset_t get_line_length(cboffset_t cboffset)
+    cboffset_t compute_n_chars(cboffset_t cboffset)
     {
         cboffset_t i = 0;
         

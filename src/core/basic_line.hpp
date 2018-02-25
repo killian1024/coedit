@@ -39,7 +39,7 @@ template<
 class basic_line
 {
 public:
-    using self_type = basic_line<
+    using line_type = basic_line<
             TpChar,
             LINES_CACHE_SIZE,
             CHARACTERS_BUFFER_CACHE_SIZE,
@@ -204,7 +204,7 @@ public:
         }
         else
         {
-            self_type& prev_lne = lnes_cache_->get_line(prev_);
+            line_type& prev_lne = lnes_cache_->get_line(prev_);
             characters_buffer_type& prev_cb =
                     chars_buf_cache_->get_character_buffer(prev_lne.get_cbid());
             
@@ -235,9 +235,9 @@ public:
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
-        self_type* nxt_lne;
+        line_type* nxt_lne;
         
-        current_cb.insert_character(ch, cboffset_, loffset);
+        current_cb.insert_character(ch, cboffset_ + loffset);
         ++n_chars_;
         
         while (current_nxt_lid != EMPTY)
@@ -252,9 +252,9 @@ public:
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
-        self_type* nxt_lne;
+        line_type* nxt_lne;
         
-        current_cb.erase_character(cboffset_, loffset);
+        current_cb.erase_character(cboffset_ + loffset);
         --n_chars_;
     
         while (current_nxt_lid != EMPTY)
@@ -272,7 +272,7 @@ public:
             throw invalid_operation_exception();
         }
     
-        self_type* nxt_lne = &(lnes_cache_->get_line(nxt_));
+        line_type* nxt_lne = &(lnes_cache_->get_line(nxt_));
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
         
         if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)

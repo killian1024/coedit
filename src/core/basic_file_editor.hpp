@@ -414,7 +414,8 @@ private:
 };
 
 
-using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, std::allocator<int>>;
+//using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, std::allocator<int>>;
+using file_editor = basic_file_editor<char16_t, 8192, 160, 16, std::allocator<int>>;
 
 
 }

@@ -29,7 +29,7 @@ template<
 class basic_characters_buffer
 {
 public:
-    using self_type = basic_characters_buffer<
+    using characters_buffer_type = basic_characters_buffer<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE
@@ -68,32 +68,67 @@ public:
     {
     }
     
-    void insert_character(char_type ch, cboffset_t cboffset, loffset_t loffset)
+    void insert_character(char_type ch, cboffset_t cboffset)
     {
-        auto offset = cboffset + loffset;
-        
-        if (offset < cur_size_)
+        if (cur_size_ == CHARACTERS_BUFFER_SIZE)
         {
-            memcpy((buf_ + offset + 1), (buf_ + offset), (cur_size_ - offset) * sizeof(char_type));
+            // New buffer creation.
+            cbid_t new_cbid = chars_buf_cache_->get_new_cbid();
+            chars_buf_cache_->insert(new_cbid, characters_buffer_type(
+                    new_cbid, cbid_, nxt_, chars_buf_cache_));
+            if (nxt_ != EMPTY)
+            {
+                characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+                nxt_cb.prev_ = new_cbid;
+            }
+            nxt_ = new_cbid;
+            
+            // Move the current buffer half data in the new buffer.
+            characters_buffer_type& new_cb = chars_buf_cache_->get_character_buffer(new_cbid);
+            constexpr auto half_size = CHARACTERS_BUFFER_SIZE / 2;
+            memcpy(new_cb.buf_, buf_ + half_size, half_size * sizeof(char_type));
+            cur_size_ -= half_size;
+            new_cb.cur_size_ = half_size;
         }
-        
-        buf_[offset] = ch;
-        ++cur_size_;
+    
+        // Insert the new character.
+        if (cboffset > cur_size_)
+        {
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+            nxt_cb.insert_character(ch, cboffset - cur_size_);
+        }
+        else
+        {
+            if (cboffset < cur_size_)
+            {
+                memcpy((buf_ + cboffset + 1), (buf_ + cboffset),
+                       (cur_size_ - cboffset) * sizeof(char_type));
+            }
+    
+            buf_[cboffset] = ch;
+            ++cur_size_;
+        }
     }
     
-    void erase_character(cboffset_t cboffset, loffset_t loffset)
+    void erase_character(cboffset_t cboffset)
     {
-        auto offset = cboffset + loffset;
-    
         if (cur_size_ > 0)
         {
-            if (offset + 1 < cur_size_)
+            if (cboffset >= cur_size_)
             {
-                memcpy((buf_ + offset), (buf_ + offset + 1),
-                       (cur_size_ - offset - 1) * sizeof(char_type));
+                characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+                nxt_cb.erase_character(cboffset - cur_size_);
             }
-            
-            --cur_size_;
+            else
+            {
+                if (cboffset + 1 < cur_size_)
+                {
+                    memcpy((buf_ + cboffset), (buf_ + cboffset + 1),
+                           (cur_size_ - cboffset - 1) * sizeof(char_type));
+                }
+    
+                --cur_size_;
+            }
         }
     }
     
@@ -101,13 +136,18 @@ public:
     {
         cboffset_t i = 0;
         
-        while (buf_[cboffset] != LF && buf_[cboffset] != CR && cboffset < cur_size_)
+        while (cboffset < cur_size_ && buf_[cboffset] != LF && buf_[cboffset] != CR)
         {
             ++i;
             ++cboffset;
         }
         
-        if (cboffset < cur_size_)
+        if (cboffset == cur_size_ && nxt_ != EMPTY)
+        {
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+            return i + nxt_cb.compute_n_chars(0);
+        }
+        else if (cboffset < cur_size_)
         {
             ++i;
             if (buf_[cboffset] == CR && buf_[cboffset + 1] == LF)
@@ -121,6 +161,12 @@ public:
     
     char_type& operator [](std::size_t i) noexcept
     {
+        if (i >= cur_size_)
+        {
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+            return nxt_cb[i - cur_size_];
+        }
+        
         return buf_[i];
     }
     
@@ -175,7 +221,7 @@ public:
     }
 
 private:
-    char_type buf_[CHARACTERS_BUFFER_CACHE_SIZE];
+    alignas(CHARACTERS_BUFFER_SIZE * sizeof(char_type)) char_type buf_[CHARACTERS_BUFFER_SIZE];
     
     cbid_t cbid_;
     

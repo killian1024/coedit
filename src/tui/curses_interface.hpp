@@ -37,10 +37,9 @@ public:
             allocator_type<int>
     >;
     
-    curses_interface(file_editor_type* file_editr, std::uint16_t fps)
+    curses_interface(file_editor_type* file_editr)
             : file_editr_(file_editr)
             , win_(nullptr)
-            , fps_(fps)
     {
     }
     
@@ -184,8 +183,6 @@ private:
     file_editor_type* file_editr_;
     
     WINDOW* win_;
-    
-    std::uint16_t fps_;
 };
 
 
@@ -203,8 +200,7 @@ curses_interface(
                 CHARACTERS_BUFFER_CACHE_SIZE,
                 CHARACTERS_BUFFER_SIZE,
                 TpAllocator
-        >*,
-        std::uint16_t
+        >*
 ) -> curses_interface<
         TpChar,
         LINES_CACHE_SIZE,

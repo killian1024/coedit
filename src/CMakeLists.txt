@@ -30,5 +30,5 @@ add_library(coedit_tui STATIC ${TUI_SOURCE_FILES})
 set_target_properties(coedit_tui PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(coedit_tui -lkboost ${CURSES_LIBRARIES})
 
-add_executable(coedit main.cpp ${CORE_SOURCE_FILES} ${TUI_SOURCE_FILES})
-target_link_libraries(coedit -lkboost ${CURSES_LIBRARIES})
+add_executable(coedit main.cpp)
+target_link_libraries(coedit coedit_core coedit_tui -lkboost ${CURSES_LIBRARIES})

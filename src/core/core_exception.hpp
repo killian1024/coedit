@@ -57,6 +57,15 @@ class invalid_operation_exception : public core_exception
 };
 
 
+class characte_buffer_overflow_exception : public core_exception
+{
+    char const* what() const noexcept override
+    {
+        return "character buffer overflow exception";
+    }
+};
+
+
 }
 }
 

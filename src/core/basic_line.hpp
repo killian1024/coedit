@@ -103,7 +103,7 @@ public:
             characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cur_.first);
             
             if (cur_.second + 1 >= CHARACTERS_BUFFER_SIZE ||
-                cur_.second + 1 >= current_cb.get_cur_size())
+                cur_.second + 1 >= current_cb.get_size())
             {
                 cur_.second = 0;
                 cur_.first = current_cb.get_nxt();
@@ -218,7 +218,19 @@ public:
     {
         characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
     
-        if (current_cb[cboffset_] == LF)
+    
+        // todo : when the sharing buffers will be implemented, fix that shit :)
+        try
+        {
+            current_cb[cboffset_];
+        }
+        catch (...)
+        {
+            return end();
+        }
+        // end_shit
+    
+        if (current_cb[cboffset_] == LF || current_cb[cboffset_] == CR)
         {
             return end();
         }

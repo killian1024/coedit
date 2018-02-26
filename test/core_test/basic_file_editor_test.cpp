@@ -27,21 +27,6 @@ TEST(basic_file_editor, handle_command)
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
     file_editr.insert_character(data++);
     file_editr.insert_character('\n');
-    
-    kios::ios_redirect iosr(std::cout);
-    iosr.redirect_to_embedded_stringstream();
-    
-    for (auto& line : file_editr)
-    {
-        for (auto& ch : line)
-        {
-            std::cout << (char)ch;
-        }
-
-        std::cout << kios::newl;
-    }
-    
-    iosr.unredirect();
 }
 
 
@@ -52,14 +37,42 @@ TEST(basic_file_editor, insert_character)
     
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
+}
+
+
+TEST(basic_file_editor, iterator)
+{
+    using file_editor = cc::basic_file_editor<char16_t, 8192, 160, 8, std::allocator<int>>;
     
-    //for (auto& line : file_editr)
-    //{
-    //    for (auto& ch : line)
-    //    {
-    //        std::cout << (char)ch;
-    //    }
-    //
-    //    std::cout << kios::newl;
-    //}
+    file_editor file_editr(cc::newline_format::UNIX);
+    file_editor::char_type data = 48;
+    
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
+    
+    kios::ios_redirect iosr(std::cout);
+    iosr.redirect_to_embedded_stringstream();
+    
+    for (auto& line : file_editr)
+    {
+        for (auto& ch : line)
+        {
+            std::cout << (char)ch;
+        }
+        
+        std::cout << kios::newl;
+    }
+    
+    iosr.unredirect();
 }

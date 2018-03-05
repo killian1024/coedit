@@ -24,7 +24,7 @@ set(TUI_SOURCE_FILES
         
 add_library(coedit_core STATIC ${CORE_SOURCE_FILES})
 set_target_properties(coedit_core PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(coedit_core -lkboost)
+target_link_libraries(coedit_core -lkboost -lstdc++fs)
 
 add_library(coedit_tui STATIC ${TUI_SOURCE_FILES})
 set_target_properties(coedit_tui PROPERTIES LINKER_LANGUAGE CXX)

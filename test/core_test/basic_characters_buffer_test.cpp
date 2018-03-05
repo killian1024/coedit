@@ -17,14 +17,16 @@ TEST(basic_characters_buffer, operator_subscript)
     
     chatacters_buffer::cboffset_type cboffst = 0;
     chatacters_buffer::char_type ch = 'A';
-    chatacters_buffer_cache cb_cache;
+    chatacters_buffer_cache cb_cache(0);
+    
     cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
-    auto& cb = cb_cache.get_character_buffer(0);
+    auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     std::size_t i;
-    for (i = 0; i < cb.get_real_size() * 3; ++i)
+    for (i = 0; i < cb.get_real_size() * 30; ++i)
     {
         cb.insert_character(ch++, cboffst++);
     }
+    
+    cb_cache.unlock_character_buffer(0);
 }
-

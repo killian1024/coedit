@@ -136,14 +136,17 @@ public:
     
     basic_file_editor(newline_format newl_format)
             : lnes_cache_()
-            , chars_buf_cache_()
+            , chars_buf_cache_(current_editr_id_)
             , first_lid_(EMPTY)
             , current_lid_(EMPTY)
             , cursor_pos_({0, 0})
             , first_display_lid_(EMPTY)
             , n_lnes_(1)
             , newl_format_(newl_format)
+            , editr_id_(current_editr_id_)
     {
+        current_editr_id_ = klow::add(current_editr_id_, 1);
+        
         current_lid_ = lnes_cache_.get_new_lid();
         first_lid_ = current_lid_;
         first_display_lid_ = current_lid_;
@@ -411,11 +414,31 @@ private:
     std::size_t n_lnes_;
     
     newline_format newl_format_;
+    
+    eid_t editr_id_;
+    
+    static eid_t current_editr_id_;
 };
 
 
 //using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, std::allocator<int>>;
 using file_editor = basic_file_editor<char16_t, 8192, 160, 16, std::allocator<int>>;
+
+
+template<
+        typename TpChar,
+        std::size_t LINES_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        typename TpAllocator
+>
+std::size_t basic_file_editor<
+        TpChar,
+        LINES_CACHE_SIZE,
+        CHARACTERS_BUFFER_CACHE_SIZE,
+        CHARACTERS_BUFFER_SIZE,
+        TpAllocator
+>::current_editr_id_ = 0;
 
 
 }

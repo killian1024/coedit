@@ -40,8 +40,6 @@ public:
     
     using cboffset_type = cboffset_t;
     
-    
-    
     using characters_buffer_cache_type = basic_characters_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
@@ -197,7 +195,7 @@ public:
             cur_size = pnxt_cb->size_;
         }
         
-        return buf_[i];
+        return cur_buf[i];
     }
     
     cbid_t get_cbid() const

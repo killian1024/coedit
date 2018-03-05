@@ -48,7 +48,7 @@ public:
             TpAllocator
     >;
     
-    using cache_type = kcontain::buffer_cache<lid_t, line_type, LINES_CACHE_SIZE>;
+    using cache_type = kcontain::static_cache<lid_t, line_type, LINES_CACHE_SIZE>;
     
     using iterator = typename cache_type::iterator;
     
@@ -115,7 +115,7 @@ public:
     {
         static lid_t old_lid = EMPTY;
         lid_t new_lid = old_lid;
-        iterator it;
+        iterator it = end();
         
         do
         {

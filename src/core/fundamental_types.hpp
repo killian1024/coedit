@@ -16,6 +16,7 @@ namespace coedit {
 namespace core {
 
 
+using eid_t = std::uint64_t;
 using lid_t = std::uint64_t;
 using loffset_t = std::uint64_t;
 using coffset_t = std::uint64_t;

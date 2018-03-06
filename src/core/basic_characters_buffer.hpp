@@ -5,6 +5,10 @@
 #ifndef COEDIT_CORE_BASIC_CHARACTERS_BUFFER_HPP
 #define COEDIT_CORE_BASIC_CHARACTERS_BUFFER_HPP
 
+#include <experimental/filesystem>
+#include <fstream>
+#include <memory>
+
 #include "basic_characters_buffer_cache.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
@@ -12,6 +16,9 @@
 
 namespace coedit {
 namespace core {
+
+
+namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -71,7 +78,55 @@ public:
     {
     }
     
-    // HERE : implement copy constructor !
+    basic_characters_buffer(
+            const stdfs::path& cb_path,
+            characters_buffer_cache_type* chars_buf_cache
+    )
+            : chars_buf_cache_(chars_buf_cache)
+    {
+        std::ifstream ifs;
+    
+        ifs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+        ifs.open(cb_path, std::ios::in | std::ios::binary);
+    
+        ifs.read((char*)&cbid_, sizeof(cbid_));
+        ifs.read((char*)&prev_, sizeof(prev_));
+        ifs.read((char*)&nxt_, sizeof(nxt_));
+        ifs.read((char*)&size_, sizeof(size_));
+        ifs.read((char*)buf_, sizeof(char_type) * size_);
+    
+        ifs.close();
+    }
+    
+    basic_characters_buffer& operator =(const basic_characters_buffer& rhs)
+    {
+        if (this != &rhs)
+        {
+            memcpy(buf_, rhs.buf_, rhs.size_ * sizeof(char_type));
+            cbid_ = rhs.cbid_;
+            prev_ = rhs.prev_;
+            nxt_ = rhs.nxt_;
+            size_ = rhs.size_;
+            chars_buf_cache_ = rhs.chars_buf_cache_;
+        }
+        
+        return *this;
+    }
+    
+    basic_characters_buffer& operator =(basic_characters_buffer&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            memcpy(buf_, rhs.buf_, rhs.size_ * sizeof(char_type));
+            std::swap(cbid_, rhs.cbid_);
+            std::swap(prev_, rhs.prev_);
+            std::swap(nxt_, rhs.nxt_);
+            std::swap(size_, rhs.size_);
+            std::swap(chars_buf_cache_, rhs.chars_buf_cache_);
+        }
+        
+        return *this;
+    }
     
     void insert_character(char_type ch, cboffset_t cboffset)
     {
@@ -83,13 +138,13 @@ public:
                     new_cbid, cbid_, nxt_, chars_buf_cache_));
             if (nxt_ != EMPTY)
             {
-                characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+                characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
                 nxt_cb.prev_ = new_cbid;
             }
             nxt_ = new_cbid;
             
             // Move the current buffer half data in the new buffer.
-            characters_buffer_type& new_cb = chars_buf_cache_->get_character_buffer(new_cbid);
+            characters_buffer_type& new_cb = chars_buf_cache_->get_cb(new_cbid);
             constexpr auto half_size = CHARACTERS_BUFFER_SIZE / 2;
             memcpy(new_cb.buf_, buf_ + half_size, half_size * sizeof(char_type));
             size_ -= half_size;
@@ -104,7 +159,7 @@ public:
                 throw characte_buffer_overflow_exception();
             }
             
-            characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
             nxt_cb.insert_character(ch, cboffset - size_);
         }
         else
@@ -131,7 +186,7 @@ public:
                     throw characte_buffer_overflow_exception();
                 }
                 
-                characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+                characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
                 nxt_cb.erase_character(cboffset - size_);
             }
             else
@@ -159,7 +214,7 @@ public:
         
         if (cboffset == size_ && nxt_ != EMPTY)
         {
-            characters_buffer_type& nxt_cb = chars_buf_cache_->get_character_buffer(nxt_);
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
             return i + nxt_cb.compute_n_chars(0);
         }
         else if (cboffset < size_)
@@ -172,6 +227,22 @@ public:
         }
     
         return i;
+    }
+    
+    void store_buffer(const stdfs::path& cb_path) const
+    {
+        std::ofstream ofs;
+        
+        ofs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+        ofs.open(cb_path, std::ios::out | std::ios::binary);
+    
+        ofs.write((const char*)&cbid_, sizeof(cbid_));
+        ofs.write((const char*)&prev_, sizeof(prev_));
+        ofs.write((const char*)&nxt_, sizeof(nxt_));
+        ofs.write((const char*)&size_, sizeof(size_));
+        ofs.write((const char*)buf_, sizeof(char_type) * size_);
+        
+        ofs.close();
     }
     
     char_type& operator [](std::size_t i)
@@ -187,9 +258,9 @@ public:
             {
                 throw characte_buffer_overflow_exception();
             }
-    
+            
             i -= cur_size;
-            pnxt_cb = &chars_buf_cache_->get_character_buffer(cur_nxt);
+            pnxt_cb = &chars_buf_cache_->get_cb(cur_nxt);
             cur_buf = pnxt_cb->buf_;
             cur_nxt = pnxt_cb->nxt_;
             cur_size = pnxt_cb->size_;
@@ -256,13 +327,13 @@ public:
 private:
     alignas(CHARACTERS_BUFFER_SIZE * sizeof(char_type)) char_type buf_[CHARACTERS_BUFFER_SIZE];
     
-    cbid_t cbid_{};
+    cbid_t cbid_;
     
-    cbid_t prev_{};
+    cbid_t prev_;
     
-    cbid_t nxt_{};
+    cbid_t nxt_;
     
-    cboffset_t size_{};
+    cboffset_t size_;
     
     characters_buffer_cache_type* chars_buf_cache_;
 };

@@ -100,7 +100,7 @@ public:
         
         self_type& operator ++() noexcept override
         {
-            characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cur_.first);
+            characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cur_.first);
             
             if (cur_.second + 1 >= CHARACTERS_BUFFER_SIZE ||
                 cur_.second + 1 >= current_cb.get_size())
@@ -140,14 +140,14 @@ public:
         
         value_type& operator *() noexcept override
         {
-            characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cur_.first);
+            characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cur_.first);
             
             return current_cb[cur_.second];
         }
         
         value_type* operator ->() noexcept override
         {
-            characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cur_.first);
+            characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cur_.first);
             
             return &(current_cb[cur_.second]);
         }
@@ -205,8 +205,7 @@ public:
         else
         {
             line_type& prev_lne = lnes_cache_->get_line(prev_);
-            characters_buffer_type& prev_cb =
-                    chars_buf_cache_->get_character_buffer(prev_lne.get_cbid());
+            characters_buffer_type& prev_cb = chars_buf_cache_->get_cb(prev_lne.get_cbid());
             
             cbid_ = prev_cb.get_cbid();
             cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
@@ -216,7 +215,7 @@ public:
     
     inline iterator begin() noexcept
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
     
     
         // todo : when the sharing buffers will be implemented, fix that shit :)
@@ -245,7 +244,7 @@ public:
     
     void insert_character(char_type ch, loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
         
@@ -262,7 +261,7 @@ public:
     
     void erase_character(loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
         
@@ -285,7 +284,7 @@ public:
         }
     
         line_type* nxt_lne = &(lnes_cache_->get_line(nxt_));
-        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
         
         if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
         {
@@ -311,7 +310,7 @@ public:
     
     bool can_go_right(loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
         auto val = current_cb[cboffset_ + loffset];
         
         return val != LF && val != CR && (nxt_ != EMPTY || loffset < n_chars_);
@@ -319,7 +318,7 @@ public:
     
     std::size_t get_line_length()
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_character_buffer(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
         
         if (n_chars_ > 0)
         {

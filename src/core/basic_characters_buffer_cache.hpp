@@ -19,6 +19,9 @@ namespace coedit {
 namespace core {
 
 
+namespace stdfs = std::experimental::filesystem;
+
+
 template<
         typename TpChar,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
@@ -36,7 +39,7 @@ public:
     >;
     
     using cache_type = kcontain::static_cache<
-            lid_t,
+            cbid_t,
             characters_buffer_type,
             CHARACTERS_BUFFER_CACHE_SIZE
     >;
@@ -81,24 +84,40 @@ public:
         cche_.unlock(it);
     }
     
-    iterator find(cbid_t ky) noexcept
+    iterator find(cbid_t ky)
     {
         if (ky == EMPTY)
         {
             return cche_.end();
         }
         
-        return cche_.find(ky);
+        iterator it = cche_.find(ky);
+        
+        if (it.end())
+        {
+            load_cb(ky);
+            it = cche_.find(ky);
+        }
+        
+        return it;
     }
     
-    iterator find_and_lock(cbid_t ky) noexcept
+    iterator find_and_lock(cbid_t ky)
     {
         if (ky == EMPTY)
         {
             return cche_.end();
         }
         
-        return cche_.find_and_lock(ky);
+        iterator it = cche_.find_and_lock(ky);
+        
+        if (it.end())
+        {
+            load_cb(ky);
+            it = cche_.find_and_lock(ky);
+        }
+        
+        return it;
     }
     
     template<typename TpValue_>
@@ -111,13 +130,13 @@ public:
         
         if (!cche_.is_least_recently_used_free())
         {
-            store_character_buffer(cche_.get_least_recently_used_value());
+            store_cb(cche_.get_least_recently_used_value());
         }
         
         cche_.insert(ky, std::forward<TpValue_>(val));
     }
     
-    characters_buffer_type& get_character_buffer(cbid_t cbid)
+    characters_buffer_type& get_cb(cbid_t cbid)
     {
         iterator it = find(cbid);
         
@@ -131,7 +150,7 @@ public:
         }
     }
     
-    characters_buffer_type& get_character_buffer_and_lock(cbid_t cbid)
+    characters_buffer_type& get_cb_and_lock(cbid_t cbid)
     {
         iterator it = find_and_lock(cbid);
         
@@ -145,7 +164,7 @@ public:
         }
     }
     
-    void unlock_character_buffer(cbid_t cbid)
+    void unlock_cb(cbid_t cbid)
     {
         iterator it = find(cbid);
         
@@ -189,26 +208,44 @@ public:
     }
     
 private:
-    void store_character_buffer(characters_buffer_type& cb)
+    stdfs::path get_cb_path(cbid_t cbid)
     {
-        namespace stdfs = std::experimental::filesystem;
+        //stdfs::path tmp_path = ksys::get_tmp_path();
+        stdfs::path cb_path = ".";
         
-        stdfs::path tmp_path = ksys::get_tmp_path();
+        cb_path.append("coedit-");
+        cb_path.concat(std::to_string(ksys::get_pid()));
+        cb_path.concat("-");
+        cb_path.concat(std::to_string(editr_id_));
+        cb_path.concat("-");
+        cb_path.concat(std::to_string(cbid));
         
-        tmp_path.append("coedit-");
-        tmp_path.concat(std::to_string(ksys::get_pid()));
-        tmp_path.concat("-");
-        tmp_path.concat(std::to_string(editr_id_));
-        tmp_path.concat("-");
-        tmp_path.concat(std::to_string(cb.get_cbid()));
-        
-        
+        return cb_path;
+    }
+    
+    void store_cb(characters_buffer_type& cb)
+    {
+        cb.store_buffer(get_cb_path(cb.get_cbid()));
+    }
+    
+    void load_cb(cbid_t ky)
+    {
+        // todo : implement bit-set for available cbid's
+        try
+        {
+            stdfs::path cb_path = get_cb_path(ky);
+            insert(ky, characters_buffer_type(cb_path, this));
+            remove(cb_path.c_str());
+        }
+        catch (...)
+        {
+        }
     }
 
 private:
-    cache_type cche_{};
+    cache_type cche_;
     
-    eid_t editr_id_{};
+    eid_t editr_id_;
 };
 
 

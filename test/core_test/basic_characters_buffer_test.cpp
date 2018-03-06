@@ -12,21 +12,26 @@ namespace cc = coedit::core;
 
 TEST(basic_characters_buffer, operator_subscript)
 {
-    using chatacters_buffer_cache = cc::basic_characters_buffer_cache<char, 3, 8>;
-    using chatacters_buffer = cc::basic_characters_buffer<char, 3, 8>;
+    using chatacters_buffer_cache = cc::basic_characters_buffer_cache<char, 4, 8>;
+    using chatacters_buffer = cc::basic_characters_buffer<char, 4, 8>;
     
-    chatacters_buffer::cboffset_type cboffst = 0;
-    chatacters_buffer::char_type ch = 'A';
+    chatacters_buffer::cboffset_type cboffst;
+    chatacters_buffer::char_type ch;
     chatacters_buffer_cache cb_cache(0);
+    std::size_t i;
     
     cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
-    auto& cb = cb_cache.get_character_buffer_and_lock(0);
+    auto& cb = cb_cache.get_cb_and_lock(0);
     
-    std::size_t i;
-    for (i = 0; i < cb.get_real_size() * 30; ++i)
+    for (ch = 33, cboffst = 0; ch < 127; ++ch, ++cboffst)
     {
-        cb.insert_character(ch++, cboffst++);
+        cb.insert_character(ch, cboffst);
     }
     
-    cb_cache.unlock_character_buffer(0);
+    for (i = 0, ch = 33; ch < 127; ++i, ++ch)
+    {
+        ASSERT_TRUE(cb[i] == ch);
+    }
+    
+    cb_cache.unlock_cb(0);
 }

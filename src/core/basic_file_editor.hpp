@@ -366,7 +366,7 @@ private:
             current_lid_ = nxt_lid;
             cursor_pos_.loffset = 0;
             
-            // todo : get window size to check here
+            // todo : get window size to check
             if (cursor_pos_.coffset < ~0)
             {
                 ++cursor_pos_.coffset;
@@ -421,8 +421,7 @@ private:
 };
 
 
-//using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, std::allocator<int>>;
-using file_editor = basic_file_editor<char16_t, 8192, 160, 16, std::allocator<int>>;
+using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, std::allocator<int>>;
 
 
 template<

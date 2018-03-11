@@ -24,6 +24,8 @@ template<
         std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 class basic_lines_cache;
@@ -34,6 +36,8 @@ template<
         std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 class basic_line
@@ -44,6 +48,8 @@ public:
             LINES_CACHE_SIZE,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
             TpAllocator
     >;
     
@@ -55,13 +61,17 @@ public:
     using characters_buffer_type = basic_characters_buffer<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
     using characters_buffer_cache_type = basic_characters_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
     using lines_cache_type = basic_lines_cache<
@@ -69,6 +79,8 @@ public:
             LINES_CACHE_SIZE,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
             TpAllocator
     >;
     
@@ -100,7 +112,8 @@ public:
         
         self_type& operator ++() noexcept override
         {
-            characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cur_.first);
+            characters_buffer_type& current_cb =
+                    chars_buf_cache_->get_characters_buffer(cur_.first);
             
             if (cur_.second + 1 >= CHARACTERS_BUFFER_SIZE ||
                 cur_.second + 1 >= current_cb.get_size())
@@ -140,14 +153,16 @@ public:
         
         value_type& operator *() noexcept override
         {
-            characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cur_.first);
+            characters_buffer_type& current_cb =
+                    chars_buf_cache_->get_characters_buffer(cur_.first);
             
             return current_cb[cur_.second];
         }
         
         value_type* operator ->() noexcept override
         {
-            characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cur_.first);
+            characters_buffer_type& current_cb =
+                    chars_buf_cache_->get_characters_buffer(cur_.first);
             
             return &(current_cb[cur_.second]);
         }
@@ -157,6 +172,8 @@ public:
                 std::size_t LINES_CACHE_SIZE__,
                 std::size_t CHARACTERS_BUFFER_CACHE_SIZE__,
                 std::size_t CHARACTERS_BUFFER_SIZE__,
+                std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE__,
+                std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE__,
                 typename TpAllocator__
         >
         friend class basic_file_editor;
@@ -205,7 +222,8 @@ public:
         else
         {
             line_type& prev_lne = lnes_cache_->get_line(prev_);
-            characters_buffer_type& prev_cb = chars_buf_cache_->get_cb(prev_lne.get_cbid());
+            characters_buffer_type& prev_cb =
+                    chars_buf_cache_->get_characters_buffer(prev_lne.get_cbid());
             
             cbid_ = prev_cb.get_cbid();
             cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
@@ -215,8 +233,8 @@ public:
     
     inline iterator begin() noexcept
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
-    
+        characters_buffer_type& current_cb =
+                chars_buf_cache_->get_characters_buffer(cbid_);
     
         // todo : when the sharing buffers will be implemented, fix that shit :)
         try
@@ -244,7 +262,7 @@ public:
     
     void insert_character(char_type ch, loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
         
@@ -261,7 +279,7 @@ public:
     
     void erase_character(loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
         
@@ -284,7 +302,7 @@ public:
         }
     
         line_type* nxt_lne = &(lnes_cache_->get_line(nxt_));
-        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
         
         if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
         {
@@ -310,7 +328,7 @@ public:
     
     bool can_go_right(loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
         auto val = current_cb[cboffset_ + loffset];
         
         return val != LF && val != CR && (nxt_ != EMPTY || loffset < n_chars_);
@@ -318,7 +336,7 @@ public:
     
     std::size_t get_line_length()
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_cb(cbid_);
+        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
         
         if (n_chars_ > 0)
         {

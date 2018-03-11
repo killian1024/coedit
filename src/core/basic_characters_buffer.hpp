@@ -24,7 +24,9 @@ namespace stdfs = std::experimental::filesystem;
 template<
         typename TpChar,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE
 >
 class basic_characters_buffer_cache;
 
@@ -32,7 +34,9 @@ class basic_characters_buffer_cache;
 template<
         typename TpChar,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE
 >
 class basic_characters_buffer
 {
@@ -40,17 +44,19 @@ public:
     using characters_buffer_type = basic_characters_buffer<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
     using char_type = TpChar;
     
-    using cboffset_type = cboffset_t;
-    
     using characters_buffer_cache_type = basic_characters_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
     basic_characters_buffer()
@@ -138,13 +144,13 @@ public:
                     new_cbid, cbid_, nxt_, chars_buf_cache_));
             if (nxt_ != EMPTY)
             {
-                characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
+                characters_buffer_type& nxt_cb = chars_buf_cache_->get_characters_buffer(nxt_);
                 nxt_cb.prev_ = new_cbid;
             }
             nxt_ = new_cbid;
             
             // Move the current buffer half data in the new buffer.
-            characters_buffer_type& new_cb = chars_buf_cache_->get_cb(new_cbid);
+            characters_buffer_type& new_cb = chars_buf_cache_->get_characters_buffer(new_cbid);
             constexpr auto half_size = CHARACTERS_BUFFER_SIZE / 2;
             memcpy(new_cb.buf_, buf_ + half_size, half_size * sizeof(char_type));
             size_ -= half_size;
@@ -159,7 +165,7 @@ public:
                 throw characte_buffer_overflow_exception();
             }
             
-            characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_characters_buffer(nxt_);
             nxt_cb.insert_character(ch, cboffset - size_);
         }
         else
@@ -186,7 +192,7 @@ public:
                     throw characte_buffer_overflow_exception();
                 }
                 
-                characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
+                characters_buffer_type& nxt_cb = chars_buf_cache_->get_characters_buffer(nxt_);
                 nxt_cb.erase_character(cboffset - size_);
             }
             else
@@ -214,7 +220,7 @@ public:
         
         if (cboffset == size_ && nxt_ != EMPTY)
         {
-            characters_buffer_type& nxt_cb = chars_buf_cache_->get_cb(nxt_);
+            characters_buffer_type& nxt_cb = chars_buf_cache_->get_characters_buffer(nxt_);
             return i + nxt_cb.compute_n_chars(0);
         }
         else if (cboffset < size_)
@@ -229,7 +235,7 @@ public:
         return i;
     }
     
-    void store_buffer(const stdfs::path& cb_path) const
+    void store(const stdfs::path& cb_path) const
     {
         std::ofstream ofs;
         
@@ -260,7 +266,7 @@ public:
             }
             
             i -= cur_size;
-            pnxt_cb = &chars_buf_cache_->get_cb(cur_nxt);
+            pnxt_cb = &chars_buf_cache_->get_characters_buffer(cur_nxt);
             cur_buf = pnxt_cb->buf_;
             cur_nxt = pnxt_cb->nxt_;
             cur_size = pnxt_cb->size_;
@@ -274,58 +280,18 @@ public:
         return cbid_;
     }
     
-    void set_cbid(cbid_t cbid)
-    {
-        cbid_ = cbid;
-    }
-    
-    cbid_t get_prev() const
-    {
-        return prev_;
-    }
-    
-    void set_prev(cbid_t prev)
-    {
-        prev_ = prev;
-    }
-    
     cbid_t get_nxt() const
     {
         return nxt_;
-    }
-    
-    void set_nxt(cbid_t nxt)
-    {
-        nxt_ = nxt;
     }
     
     cboffset_t get_size() const
     {
         return size_;
     }
-    
-    void set_size(cboffset_t cur_size)
-    {
-        size_ = cur_size;
-    }
-    
-    characters_buffer_cache_type* get_chars_buf_cache() const
-    {
-        return chars_buf_cache_;
-    }
-    
-    void set_chars_buf_cache(characters_buffer_cache_type* chars_buf_cache)
-    {
-        chars_buf_cache_ = chars_buf_cache;
-    }
-    
-    constexpr cboffset_t get_real_size() const noexcept
-    {
-        return CHARACTERS_BUFFER_SIZE;
-    }
 
 private:
-    alignas(CHARACTERS_BUFFER_SIZE * sizeof(char_type)) char_type buf_[CHARACTERS_BUFFER_SIZE];
+    char_type buf_[CHARACTERS_BUFFER_SIZE];
     
     cbid_t cbid_;
     

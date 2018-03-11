@@ -17,8 +17,10 @@ namespace tui {
 template<
         typename TpChar,
         std::size_t LINES_CACHE_SIZE,
-        std::size_t CHARACTERS_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 class curses_interface
@@ -32,8 +34,10 @@ public:
     using file_editor_type = core::basic_file_editor<
             char_type,
             LINES_CACHE_SIZE,
-            CHARACTERS_CACHE_SIZE,
+            CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
             allocator_type<int>
     >;
     
@@ -191,6 +195,8 @@ template<
         std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 curses_interface(
@@ -199,6 +205,8 @@ curses_interface(
                 LINES_CACHE_SIZE,
                 CHARACTERS_BUFFER_CACHE_SIZE,
                 CHARACTERS_BUFFER_SIZE,
+                CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+                CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
                 TpAllocator
         >*
 ) -> curses_interface<
@@ -206,6 +214,8 @@ curses_interface(
         LINES_CACHE_SIZE,
         CHARACTERS_BUFFER_CACHE_SIZE,
         CHARACTERS_BUFFER_SIZE,
+        CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         TpAllocator
 >;
 

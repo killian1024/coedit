@@ -16,7 +16,7 @@ set(CORE_SOURCE_FILES
         core/line_flags.hpp
         core/newline_format.hpp
         core/cursor_position.hpp
-        core/cbid_cache.hpp)
+        core/basic_characters_buffer_ids_buffer_cache.hpp core/basic_characters_buffer_ids_buffer.hpp)
 
 set(TUI_SOURCE_FILES
         tui/curses_interface.hpp

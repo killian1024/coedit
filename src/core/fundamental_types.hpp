@@ -22,6 +22,8 @@ using loffset_t = std::uint64_t;
 using coffset_t = std::uint64_t;
 using cbid_t = std::uint64_t;
 using cboffset_t = std::uint64_t;
+using cbidsbid_t = std::uint64_t;
+using cbidsboffset_t = std::uint64_t;
 
 
 }

@@ -10,6 +10,7 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_characters_buffer_cache.hpp"
+#include "basic_characters_buffer_ids_buffer_cache.hpp"
 #include "basic_lines_cache.hpp"
 #include "core_exception.hpp"
 #include "cursor_position.hpp"
@@ -27,6 +28,8 @@ template<
         std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 class basic_file_editor
@@ -40,7 +43,9 @@ public:
     using characters_buffer_cache_type = basic_characters_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
     using line_type = basic_line<
@@ -48,6 +53,8 @@ public:
             LINES_CACHE_SIZE,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
             TpAllocator
     >;
     
@@ -56,6 +63,8 @@ public:
             LINES_CACHE_SIZE,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
             TpAllocator
     >;
     
@@ -124,6 +133,8 @@ public:
                 std::size_t LINES_CACHE_SIZE__,
                 std::size_t CHARACTERS_BUFFER_CACHE_SIZE__,
                 std::size_t CHARACTERS_BUFFER_SIZE__,
+                std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE__,
+                std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE__,
                 typename TpAllocator__
         >
         friend class basic_file_editor;
@@ -135,8 +146,8 @@ public:
     };
     
     basic_file_editor(newline_format newl_format)
-            : lnes_cache_()
-            , chars_buf_cache_(current_editr_id_)
+            : lines_cche_()
+            , characters_buffer_cche_(current_editr_id_)
             , first_lid_(EMPTY)
             , current_lid_(EMPTY)
             , cursor_pos_({0, 0})
@@ -147,21 +158,21 @@ public:
     {
         current_editr_id_ = klow::add(current_editr_id_, 1);
         
-        current_lid_ = lnes_cache_.get_new_lid();
+        current_lid_ = lines_cche_.get_new_lid();
         first_lid_ = current_lid_;
         first_display_lid_ = current_lid_;
-        lnes_cache_.insert(current_lid_, line_type(
-                current_lid_, EMPTY, EMPTY, &lnes_cache_, &chars_buf_cache_));
+        lines_cche_.insert(current_lid_, line_type(
+                current_lid_, EMPTY, EMPTY, &lines_cche_, &characters_buffer_cche_));
     }
     
     inline iterator begin() noexcept
     {
-        return iterator(first_lid_, &lnes_cache_);
+        return iterator(first_lid_, &lines_cche_);
     }
     
     inline iterator end() noexcept
     {
-        return iterator(EMPTY, &lnes_cache_);
+        return iterator(EMPTY, &lines_cche_);
     }
     
     bool handle_command(file_editor_command cmd)
@@ -202,7 +213,7 @@ public:
         }
         else
         {
-            line_type& current_lne = lnes_cache_.get_line(current_lid_);
+            line_type& current_lne = lines_cche_.get_line(current_lid_);
             current_lne.insert_character(ch, cursor_pos_.loffset);
             ++cursor_pos_.loffset;
         }
@@ -216,7 +227,7 @@ public:
 private:
     bool handle_newline()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         
         switch (newl_format_)
         {
@@ -237,15 +248,15 @@ private:
         
         current_lne.set_n_chars(cursor_pos_.loffset + 1);
         
-        lid_t new_lid = lnes_cache_.get_new_lid();
+        lid_t new_lid = lines_cche_.get_new_lid();
         
-        lnes_cache_.insert(new_lid, line_type(
+        lines_cche_.insert(new_lid, line_type(
                 new_lid, current_lne.get_lid(), current_lne.get_nxt(),
-                &lnes_cache_, &chars_buf_cache_));
+                &lines_cche_, &characters_buffer_cche_));
         
         if (current_lne.get_nxt() != EMPTY)
         {
-            line_type& nxt_lne = lnes_cache_.get_line(current_lne.get_nxt());
+            line_type& nxt_lne = lines_cche_.get_line(current_lne.get_nxt());
             nxt_lne.set_prev(new_lid);
         }
         
@@ -261,7 +272,7 @@ private:
     
     bool handle_backspace()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         lid_t prev_lid = current_lne.get_prev();
         
         if (cursor_pos_.loffset > 0)
@@ -273,7 +284,7 @@ private:
         }
         else if (prev_lid != EMPTY)
         {
-            line_type& previous_lne = lnes_cache_.get_line(prev_lid);
+            line_type& previous_lne = lines_cche_.get_line(prev_lid);
             auto prev_lne_length = previous_lne.get_line_length();
             
             previous_lne.merge_with_next_line();
@@ -299,7 +310,7 @@ private:
     
     bool handle_go_left()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         
         if (current_lne.can_go_left(cursor_pos_.loffset))
         {
@@ -316,7 +327,7 @@ private:
     
     bool handle_go_right()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         
         if (current_lne.can_go_right(cursor_pos_.loffset))
         {
@@ -337,7 +348,7 @@ private:
     
     bool handle_go_up()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         lid_t prev_lid = current_lne.get_prev();
     
         if (prev_lid != EMPTY)
@@ -358,7 +369,7 @@ private:
     
     bool handle_go_down()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         lid_t nxt_lid = current_lne.get_nxt();
     
         if (nxt_lid != EMPTY)
@@ -386,7 +397,7 @@ private:
     
     bool handle_end()
     {
-        line_type& current_lne = lnes_cache_.get_line(current_lid_);
+        line_type& current_lne = lines_cche_.get_line(current_lid_);
         bool done = false;
         
         while (current_lne.can_go_right(cursor_pos_.loffset))
@@ -399,9 +410,9 @@ private:
     }
 
 private:
-    lines_cache_type lnes_cache_;
+    lines_cache_type lines_cche_;
     
-    characters_buffer_cache_type chars_buf_cache_;
+    characters_buffer_cache_type characters_buffer_cche_;
     
     lid_t first_lid_;
     
@@ -421,7 +432,7 @@ private:
 };
 
 
-using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, std::allocator<int>>;
+using file_editor = basic_file_editor<char16_t, 8192, 160, 4096, 160, 4096, std::allocator<int>>;
 
 
 template<
@@ -429,6 +440,8 @@ template<
         std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 std::size_t basic_file_editor<
@@ -436,6 +449,8 @@ std::size_t basic_file_editor<
         LINES_CACHE_SIZE,
         CHARACTERS_BUFFER_CACHE_SIZE,
         CHARACTERS_BUFFER_SIZE,
+        CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         TpAllocator
 >::current_editr_id_ = 0;
 

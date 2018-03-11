@@ -11,6 +11,7 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_characters_buffer.hpp"
+#include "basic_characters_buffer_ids_buffer_cache.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
 
@@ -25,7 +26,9 @@ namespace stdfs = std::experimental::filesystem;
 template<
         typename TpChar,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE
+        std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE
 >
 class basic_characters_buffer_cache
 {
@@ -35,108 +38,120 @@ public:
     using characters_buffer_type = basic_characters_buffer<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
-    using cache_type = kcontain::static_cache<
+    using characters_buffer_cache_type = kcontain::static_cache<
             cbid_t,
             characters_buffer_type,
             CHARACTERS_BUFFER_CACHE_SIZE
     >;
     
-    using iterator = typename cache_type::iterator;
+    using characters_buffer_ids_buffer_cache_type = basic_characters_buffer_ids_buffer_cache<
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
+    >;
     
-    using const_iterator = typename cache_type::const_iterator;
+    using iterator = typename characters_buffer_cache_type::iterator;
+    
+    using const_iterator = typename characters_buffer_cache_type::const_iterator;
     
     basic_characters_buffer_cache(eid_t editr_id)
-            : cche_()
+            : characters_buffer_cche_()
+            , characters_buffer_ids_buffer_cche_(editr_id)
             , editr_id_(editr_id)
     {
     }
     
     inline iterator begin() noexcept
     {
-        return cche_.begin();
+        return characters_buffer_cche_.begin();
     }
     
     inline const_iterator cbegin() const noexcept
     {
-        return cche_.cbegin();
+        return characters_buffer_cche_.cbegin();
     }
     
     inline iterator end() noexcept
     {
-        return cche_.end();
+        return characters_buffer_cche_.end();
     }
     
     inline const_iterator cend() const noexcept
     {
-        return cche_.cend();
+        return characters_buffer_cche_.cend();
     }
     
     void lock(const_iterator it) noexcept
     {
-        cche_.lock(it);
+        characters_buffer_cche_.lock(it);
     }
     
     void unlock(const_iterator it) noexcept
     {
-        cche_.unlock(it);
+        characters_buffer_cche_.unlock(it);
     }
     
-    iterator find(cbid_t ky)
+    iterator find(cbid_t cbid)
     {
-        if (ky == EMPTY)
+        if (cbid == EMPTY)
         {
-            return cche_.end();
+            return characters_buffer_cche_.end();
         }
         
-        iterator it = cche_.find(ky);
+        iterator it = characters_buffer_cche_.find(cbid);
         
         if (it.end())
         {
-            load_cb(ky);
-            it = cche_.find(ky);
+            if (try_load_characters_buffer(cbid))
+            {
+                it = characters_buffer_cche_.find(cbid);
+            }
         }
         
         return it;
     }
     
-    iterator find_and_lock(cbid_t ky)
+    iterator find_and_lock(cbid_t cbid)
     {
-        if (ky == EMPTY)
+        if (cbid == EMPTY)
         {
-            return cche_.end();
+            return characters_buffer_cche_.end();
         }
         
-        iterator it = cche_.find_and_lock(ky);
+        iterator it = characters_buffer_cche_.find_and_lock(cbid);
         
         if (it.end())
         {
-            load_cb(ky);
-            it = cche_.find_and_lock(ky);
+            if (try_load_characters_buffer(cbid))
+            {
+                it = characters_buffer_cche_.find_and_lock(cbid);
+            }
         }
         
         return it;
     }
     
     template<typename TpValue_>
-    void insert(lid_t ky, TpValue_&& val)
+    void insert(cbid_t ky, TpValue_&& val)
     {
         if (ky == EMPTY)
         {
             throw invalid_cbid_exception();
         }
         
-        if (!cche_.is_least_recently_used_free())
+        if (!characters_buffer_cche_.is_least_recently_used_free())
         {
-            store_cb(cche_.get_least_recently_used_value());
+            store_characters_buffer(characters_buffer_cche_.get_least_recently_used_value());
         }
         
-        cche_.insert(ky, std::forward<TpValue_>(val));
+        characters_buffer_cche_.insert(ky, std::forward<TpValue_>(val));
     }
     
-    characters_buffer_type& get_cb(cbid_t cbid)
+    characters_buffer_type& get_characters_buffer(cbid_t cbid)
     {
         iterator it = find(cbid);
         
@@ -150,7 +165,7 @@ public:
         }
     }
     
-    characters_buffer_type& get_cb_and_lock(cbid_t cbid)
+    characters_buffer_type& get_characters_buffer_and_lock(cbid_t cbid)
     {
         iterator it = find_and_lock(cbid);
         
@@ -164,7 +179,7 @@ public:
         }
     }
     
-    void unlock_cb(cbid_t cbid)
+    void unlock_characters_buffer(cbid_t cbid)
     {
         iterator it = find(cbid);
         
@@ -208,42 +223,53 @@ public:
     }
     
 private:
-    stdfs::path get_cb_path(cbid_t cbid)
+    stdfs::path get_characters_buffer_path(cbid_t cbid)
     {
-        //stdfs::path tmp_path = ksys::get_tmp_path();
         stdfs::path cb_path = ".";
         
         cb_path.append("coedit-");
         cb_path.concat(std::to_string(ksys::get_pid()));
         cb_path.concat("-");
         cb_path.concat(std::to_string(editr_id_));
-        cb_path.concat("-");
+        cb_path.concat("-cb-");
         cb_path.concat(std::to_string(cbid));
         
         return cb_path;
     }
     
-    void store_cb(characters_buffer_type& cb)
+    void store_characters_buffer(characters_buffer_type& cb)
     {
-        cb.store_buffer(get_cb_path(cb.get_cbid()));
+        cb.store(get_characters_buffer_path(cb.get_cbid()));
     }
     
-    void load_cb(cbid_t ky)
+    void load_characters_buffer(cbid_t cbid)
     {
-        // todo : implement bit-set for available cbid's
-        try
+        stdfs::path cb_path = get_characters_buffer_path(cbid);
+        insert(cbid, characters_buffer_type(cb_path, this));
+        remove(cb_path.c_str());
+    }
+    
+    bool try_load_characters_buffer(cbid_t cbid)
+    {
+        stdfs::path cb_path = get_characters_buffer_path(cbid);
+        
+        if (stdfs::exists(cb_path))
         {
-            stdfs::path cb_path = get_cb_path(ky);
-            insert(ky, characters_buffer_type(cb_path, this));
+            insert(cbid, characters_buffer_type(cb_path, this));
             remove(cb_path.c_str());
+            
+            return true;
         }
-        catch (...)
+        else
         {
+            return false;
         }
     }
 
 private:
-    cache_type cche_;
+    characters_buffer_cache_type characters_buffer_cche_;
+    
+    characters_buffer_ids_buffer_cache_type characters_buffer_ids_buffer_cche_;
     
     eid_t editr_id_;
 };

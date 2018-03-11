@@ -42,7 +42,7 @@ TEST(basic_file_editor, insert_character)
 
 TEST(basic_file_editor, iterator)
 {
-    using file_editor = cc::basic_file_editor<char16_t, 8192, 160, 8, std::allocator<int>>;
+    using file_editor = cc::basic_file_editor<char16_t, 8192, 160, 8, 8192, 160, std::allocator<int>>;
     
     file_editor file_editr(cc::newline_format::UNIX);
     file_editor::char_type data = 48;

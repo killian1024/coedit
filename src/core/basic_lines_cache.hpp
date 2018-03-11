@@ -24,6 +24,8 @@ template<
         std::size_t LINES_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
         std::size_t CHARACTERS_BUFFER_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
         typename TpAllocator
 >
 class basic_lines_cache
@@ -37,7 +39,9 @@ public:
     using characters_buffer_cache_type = basic_characters_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE
+            CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
     using line_type = basic_line<
@@ -45,6 +49,8 @@ public:
             LINES_CACHE_SIZE,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
             TpAllocator
     >;
     

@@ -90,6 +90,19 @@ public:
         return buf_[byte_trg] == 0;
     }
     
+    inline bool is_empty() const noexcept
+    {
+        for (auto& x : buf_)
+        {
+            if (x != 0)
+            {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
     void store(const stdfs::path& cbidsb_path) const
     {
         std::ofstream ofs;

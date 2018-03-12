@@ -6,8 +6,9 @@
 #define COEDIT_CORE_BASIC_CHARACTERS_BUFFER_IDS_BUFFER_CACHE_HPP
 
 #include <array>
-#include <fstream>
 #include <cstdint>
+#include <fstream>
+#include <regex>
 
 #include <kboost/kboost.hpp>
 
@@ -48,7 +49,31 @@ public:
     basic_characters_buffer_ids_buffer_cache(eid_t editr_id)
             : cche_()
             , editr_id_(editr_id)
+            , swap_usd_(false)
     {
+    }
+    
+    ~basic_characters_buffer_ids_buffer_cache() noexcept
+    {
+        if (swap_usd_)
+        {
+            std::string rgx_str;
+            rgx_str += "^";
+            rgx_str += get_characters_buffer_ids_base_path().filename();
+            rgx_str += "[0-9]+$";
+            std::regex rgx(rgx_str);
+            
+            for (auto& x : stdfs::directory_iterator("."))
+            {
+                if (stdfs::is_regular_file(x))
+                {
+                    if (std::regex_match(x.path().filename().c_str(), rgx))
+                    {
+                        remove(x.path().c_str());
+                    }
+                }
+            }
+        }
     }
     
     inline iterator begin() noexcept
@@ -85,7 +110,7 @@ public:
     {
         iterator it = cche_.find(cbidsbid);
         
-        if (it.end())
+        if (it.end() && swap_usd_)
         {
             if (try_load_characters_buffer_ids(cbidsbid))
             {
@@ -100,7 +125,7 @@ public:
     {
         iterator it = cche_.find_and_lock(cbidsbid);
         
-        if (it.end())
+        if (it.end() && swap_usd_)
         {
             if (try_load_characters_buffer_ids(cbidsbid))
             {
@@ -114,7 +139,8 @@ public:
     template<typename TpValue_>
     iterator insert(cbidsbid_t cbidsbid, TpValue_&& val)
     {
-        if (!cche_.is_least_recently_used_free())
+        if (!cche_.is_least_recently_used_free() &&
+            !cche_.get_least_recently_used_value().is_empty())
         {
             store_characters_buffer_ids(cche_.get_least_recently_used_value());
         }
@@ -128,7 +154,7 @@ public:
         {
             throw invalid_cbid_exception();
         }
-    
+        
         cbidsbid_t cbidsbid = get_buffer_target(cbid);
         iterator it = find(cbidsbid);
         
@@ -169,7 +195,7 @@ private:
         return static_cast<std::uint8_t>(cbid % 8);
     }
     
-    stdfs::path get_characters_buffer_ids_path(cbidsbid_t cbidsbid)
+    stdfs::path get_characters_buffer_ids_base_path()
     {
         stdfs::path cbidsb_path = ".";
         
@@ -178,6 +204,13 @@ private:
         cbidsb_path.concat("-");
         cbidsb_path.concat(std::to_string(editr_id_));
         cbidsb_path.concat("-cbidsb-");
+        
+        return cbidsb_path;
+    }
+    
+    stdfs::path get_characters_buffer_ids_path(cbidsbid_t cbidsbid)
+    {
+        stdfs::path cbidsb_path = get_characters_buffer_ids_base_path();
         cbidsb_path.concat(std::to_string(cbidsbid));
         
         return cbidsb_path;
@@ -186,6 +219,7 @@ private:
     void store_characters_buffer_ids(characters_buffer_ids_buffer_type& cbidsb)
     {
         cbidsb.store(get_characters_buffer_ids_path(cbidsb.get_cbidsbid()));
+        swap_usd_ = true;
     }
     
     void load_characters_buffer_ids(cbidsbid_t cbidsbid)
@@ -208,6 +242,11 @@ private:
         }
         else
         {
+            if (cche_.get_least_recently_used_value().is_empty())
+            {
+                insert(cbidsbid, characters_buffer_ids_buffer_type(cbidsbid));
+            }
+            
             return false;
         }
     }
@@ -216,6 +255,8 @@ private:
     cache_type cche_;
     
     eid_t editr_id_;
+    
+    bool swap_usd_;
 };
 
 

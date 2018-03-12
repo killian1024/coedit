@@ -7,6 +7,7 @@
 
 #include <experimental/filesystem>
 #include <memory>
+#include <regex>
 
 #include <kboost/kboost.hpp>
 
@@ -62,7 +63,31 @@ public:
             : characters_buffer_cche_()
             , characters_buffer_ids_buffer_cche_(editr_id)
             , editr_id_(editr_id)
+            , swap_usd_(false)
     {
+    }
+    
+    ~basic_characters_buffer_cache() noexcept
+    {
+        if (swap_usd_)
+        {
+            std::string rgx_str;
+            rgx_str += "^";
+            rgx_str += get_characters_buffer_base_path().filename();
+            rgx_str += "[0-9]+$";
+            std::regex rgx(rgx_str);
+            
+            for (auto& x : stdfs::directory_iterator("."))
+            {
+                if (stdfs::is_regular_file(x))
+                {
+                    if (std::regex_match(x.path().filename().c_str(), rgx))
+                    {
+                        remove(x.path().c_str());
+                    }
+                }
+            }
+        }
     }
     
     inline iterator begin() noexcept
@@ -104,7 +129,7 @@ public:
         
         iterator it = characters_buffer_cche_.find(cbid);
         
-        if (it.end())
+        if (it.end() && swap_usd_)
         {
             if (try_load_characters_buffer(cbid))
             {
@@ -124,7 +149,7 @@ public:
         
         iterator it = characters_buffer_cche_.find_and_lock(cbid);
         
-        if (it.end())
+        if (it.end() && swap_usd_)
         {
             if (try_load_characters_buffer(cbid))
             {
@@ -136,9 +161,9 @@ public:
     }
     
     template<typename TpValue_>
-    void insert(cbid_t ky, TpValue_&& val)
+    void insert(cbid_t cbid, TpValue_&& val)
     {
-        if (ky == EMPTY)
+        if (cbid == EMPTY)
         {
             throw invalid_cbid_exception();
         }
@@ -148,7 +173,8 @@ public:
             store_characters_buffer(characters_buffer_cche_.get_least_recently_used_value());
         }
         
-        characters_buffer_cche_.insert(ky, std::forward<TpValue_>(val));
+        characters_buffer_cche_.insert(cbid, std::forward<TpValue_>(val));
+        characters_buffer_ids_buffer_cche_.set(cbid);
     }
     
     characters_buffer_type& get_characters_buffer(cbid_t cbid)
@@ -207,7 +233,7 @@ public:
             {
                 ++new_cbid;
             }
-            
+    
             it = find(new_cbid);
             
         } while (new_cbid != old_cbid && !it.end());
@@ -223,7 +249,7 @@ public:
     }
     
 private:
-    stdfs::path get_characters_buffer_path(cbid_t cbid)
+    stdfs::path get_characters_buffer_base_path()
     {
         stdfs::path cb_path = ".";
         
@@ -232,6 +258,13 @@ private:
         cb_path.concat("-");
         cb_path.concat(std::to_string(editr_id_));
         cb_path.concat("-cb-");
+        
+        return cb_path;
+    }
+    
+    stdfs::path get_characters_buffer_path(cbid_t cbid)
+    {
+        stdfs::path cb_path = get_characters_buffer_base_path();
         cb_path.concat(std::to_string(cbid));
         
         return cb_path;
@@ -240,6 +273,7 @@ private:
     void store_characters_buffer(characters_buffer_type& cb)
     {
         cb.store(get_characters_buffer_path(cb.get_cbid()));
+        swap_usd_ = true;
     }
     
     void load_characters_buffer(cbid_t cbid)
@@ -251,13 +285,11 @@ private:
     
     bool try_load_characters_buffer(cbid_t cbid)
     {
-        stdfs::path cb_path = get_characters_buffer_path(cbid);
-        
-        if (stdfs::exists(cb_path))
+        if (characters_buffer_ids_buffer_cche_.is_set(cbid))
         {
+            stdfs::path cb_path = get_characters_buffer_path(cbid);
             insert(cbid, characters_buffer_type(cb_path, this));
             remove(cb_path.c_str());
-            
             return true;
         }
         else
@@ -272,6 +304,8 @@ private:
     characters_buffer_ids_buffer_cache_type characters_buffer_ids_buffer_cche_;
     
     eid_t editr_id_;
+    
+    bool swap_usd_;
 };
 
 

@@ -227,7 +227,7 @@ public:
             
             cbid_ = prev_cb.get_cbid();
             cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
-            n_chars_ = prev_cb.compute_n_chars(cboffset_);
+            n_chars_ = prev_cb.get_line_length(cboffset_);
         }
     }
     

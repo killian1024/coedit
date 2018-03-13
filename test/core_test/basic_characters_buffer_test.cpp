@@ -10,6 +10,70 @@
 namespace cc = coedit::core;
 
 
+TEST(basic_characters_buffer, erase_character)
+{
+    using chatacters_buffer_cache = cc::basic_characters_buffer_cache<char, 4, 8, 4, 8>;
+    using chatacters_buffer = cc::basic_characters_buffer<char, 4, 8, 4, 8>;
+    
+    chatacters_buffer_cache cb_cache(0);
+    
+    cc::cboffset_t cboffst = 0;
+    chatacters_buffer::char_type ch = 65;
+    cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
+    auto& cb = cb_cache.get_characters_buffer_and_lock(0);
+    
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character('\n', cboffst++);
+    cb.insert_character('\n', cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    
+    cb.erase_character(4);
+    cb.erase_character(9);
+    
+    ASSERT_TRUE(cb[4] == '\n');
+    ASSERT_TRUE(cb[9] == ch - 1);
+}
+
+
+TEST(basic_characters_buffer, get_line_length)
+{
+    using chatacters_buffer_cache = cc::basic_characters_buffer_cache<char, 4, 8, 4, 8>;
+    using chatacters_buffer = cc::basic_characters_buffer<char, 4, 8, 4, 8>;
+    
+    chatacters_buffer_cache cb_cache(0);
+    
+    cc::cboffset_t cboffst = 0;
+    chatacters_buffer::char_type ch = 65;
+    cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
+    auto& cb = cb_cache.get_characters_buffer_and_lock(0);
+    
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character('\n', cboffst++);
+    cb.insert_character('\n', cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    
+    ASSERT_TRUE(cb.get_line_length(0) == 6);
+    ASSERT_TRUE(cb.get_line_length(6) == 1);
+    ASSERT_TRUE(cb.get_line_length(7) == 5);
+}
+
+
 TEST(basic_characters_buffer, operator_subscript)
 {
     using chatacters_buffer_cache = cc::basic_characters_buffer_cache<char, 4, 8, 4, 8>;

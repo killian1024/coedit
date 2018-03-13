@@ -134,7 +134,7 @@ public:
         return *this;
     }
     
-    void insert_character(char_type ch, cboffset_t cboffset)
+    void insert_character(char_type ch, cboffset_t cboffset) // HERE : reimplement this function.
     {
         if (size_ == CHARACTERS_BUFFER_SIZE)
         {
@@ -183,56 +183,55 @@ public:
     
     void erase_character(cboffset_t cboffset)
     {
-        if (size_ > 0)
+        auto& chars_buf = get_characters_buffer(&cboffset);
+        
+        if (cboffset + 1 < chars_buf.size_)
         {
-            if (cboffset >= size_)
-            {
-                if (nxt_ == EMPTY)
-                {
-                    throw characte_buffer_overflow_exception();
-                }
-                
-                characters_buffer_type& nxt_cb = chars_buf_cache_->get_characters_buffer(nxt_);
-                nxt_cb.erase_character(cboffset - size_);
-            }
-            else
-            {
-                if (cboffset + 1 < size_)
-                {
-                    memcpy((buf_ + cboffset), (buf_ + cboffset + 1),
-                           (size_ - cboffset - 1) * sizeof(char_type));
-                }
-    
-                --size_;
-            }
+            memcpy((chars_buf.buf_ + cboffset),
+                   (chars_buf.buf_ + cboffset + 1),
+                   (chars_buf.size_ - cboffset - 1) * sizeof(char_type));
         }
+    
+        --chars_buf.size_;
     }
     
-    cboffset_t compute_n_chars(cboffset_t cboffset)
+    cboffset_t get_line_length(cboffset_t cboffset)
     {
-        cboffset_t i = 0;
+        cboffset_t line_len = 0;
+        characters_buffer_type* current_chars_buf = this;
+        char_type* current_buf;
+        cboffset_t current_size;
+        cbid_t current_nxt;
         
-        while (cboffset < size_ && buf_[cboffset] != LF && buf_[cboffset] != CR)
+        do
         {
-            ++i;
-            ++cboffset;
-        }
-        
-        if (cboffset == size_ && nxt_ != EMPTY)
-        {
-            characters_buffer_type& nxt_cb = chars_buf_cache_->get_characters_buffer(nxt_);
-            return i + nxt_cb.compute_n_chars(0);
-        }
-        else if (cboffset < size_)
-        {
-            ++i;
-            if (buf_[cboffset] == CR && buf_[cboffset + 1] == LF)
+            current_chars_buf = &current_chars_buf->get_characters_buffer(&cboffset);
+            current_buf = current_chars_buf->buf_;
+            current_size = current_chars_buf->size_;
+            current_nxt = current_chars_buf->nxt_;
+            
+            while (cboffset < current_size &&
+                   current_buf[cboffset] != LF &&
+                   current_buf[cboffset] != CR)
             {
-                ++i;
+                ++line_len;
+                ++cboffset;
             }
-        }
+            
+            if (cboffset < current_size)
+            {
+                ++line_len;
+                if (current_buf[cboffset] == CR &&
+                    cboffset + 1 < CHARACTERS_BUFFER_SIZE &&
+                    current_buf[cboffset + 1] == LF)
+                {
+                    ++line_len;
+                }
+            }
+            
+        } while (cboffset == current_size && current_nxt != EMPTY);
     
-        return i;
+        return line_len;
     }
     
     void store(const stdfs::path& cb_path) const
@@ -251,28 +250,11 @@ public:
         ofs.close();
     }
     
-    char_type& operator [](std::size_t i)
+    char_type& operator [](cboffset_t i)
     {
-        char_type* cur_buf = buf_;
-        cbid_t cur_nxt = nxt_;
-        cboffset_t cur_size = size_;
-        characters_buffer_type* pnxt_cb;
+        auto& chars_buf = get_characters_buffer(&i);
         
-        while (i >= cur_size)
-        {
-            if (cur_nxt == EMPTY)
-            {
-                throw characte_buffer_overflow_exception();
-            }
-            
-            i -= cur_size;
-            pnxt_cb = &chars_buf_cache_->get_characters_buffer(cur_nxt);
-            cur_buf = pnxt_cb->buf_;
-            cur_nxt = pnxt_cb->nxt_;
-            cur_size = pnxt_cb->size_;
-        }
-        
-        return cur_buf[i];
+        return chars_buf.buf_[i];
     }
     
     cbid_t get_cbid() const
@@ -288,6 +270,29 @@ public:
     cboffset_t get_size() const
     {
         return size_;
+    }
+
+private:
+    characters_buffer_type& get_characters_buffer(cboffset_t* cboffset)
+    {
+        cbid_t cur_nxt = nxt_;
+        cboffset_t cur_size = size_;
+        characters_buffer_type* pnxt_cb = this;
+    
+        while (*cboffset >= cur_size)
+        {
+            if (cur_nxt == EMPTY)
+            {
+                throw characte_buffer_overflow_exception();
+            }
+    
+            *cboffset -= cur_size;
+            pnxt_cb = &chars_buf_cache_->get_characters_buffer(cur_nxt);
+            cur_nxt = pnxt_cb->nxt_;
+            cur_size = pnxt_cb->size_;
+        }
+    
+        return *pnxt_cb;
     }
 
 private:

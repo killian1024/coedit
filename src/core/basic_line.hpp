@@ -9,7 +9,7 @@
 
 #include <kboost/kboost.hpp>
 
-#include "basic_characters_buffer_cache.hpp"
+#include "basic_character_buffer_cache.hpp"
 #include "basic_lines_cache.hpp"
 #include "fundamental_types.hpp"
 #include "line_flags.hpp"
@@ -58,7 +58,7 @@ public:
     template<typename T>
     using allocator_type = typename TpAllocator::template rebind<T>::other;
     
-    using characters_buffer_type = basic_characters_buffer<
+    using characters_buffer_type = basic_character_buffer<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
@@ -66,7 +66,7 @@ public:
             CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
     
-    using characters_buffer_cache_type = basic_characters_buffer_cache<
+    using characters_buffer_cache_type = basic_character_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
@@ -360,11 +360,6 @@ public:
         return lid_;
     }
     
-    void set_lid(lid_t lid)
-    {
-        lid_ = lid;
-    }
-    
     lid_t get_prev() const
     {
         return prev_;
@@ -390,19 +385,9 @@ public:
         return cbid_;
     }
     
-    void set_cbid(cbid_t cbid)
-    {
-        cbid_ = cbid;
-    }
-    
     cboffset_t get_cboffset() const
     {
         return cboffset_;
-    }
-    
-    void set_cboffset(cboffset_t cboffset)
-    {
-        cboffset_ = cboffset;
     }
     
     void increment_cboffset(cboffset_t cboffset)

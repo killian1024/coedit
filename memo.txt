@@ -1,1 +1,1 @@
-alignas(CHARACTERS_BUFFER_SIZE * sizeof(char_type)) char_type buf_[CHARACTERS_BUFFER_SIZE];
+alignas(CHARACTER_BUFFER_SIZE * sizeof(char_type)) char_type buf_[CHARACTER_BUFFER_SIZE];

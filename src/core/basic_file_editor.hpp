@@ -9,8 +9,8 @@
 
 #include <kboost/kboost.hpp>
 
-#include "basic_characters_buffer_cache.hpp"
-#include "basic_characters_buffer_ids_buffer_cache.hpp"
+#include "basic_character_buffer_cache.hpp"
+#include "basic_ids_buffer_cache.hpp"
 #include "basic_lines_cache.hpp"
 #include "core_exception.hpp"
 #include "cursor_position.hpp"
@@ -40,7 +40,7 @@ public:
     template<typename T>
     using allocator_type = typename TpAllocator::template rebind<T>::other;
     
-    using characters_buffer_cache_type = basic_characters_buffer_cache<
+    using characters_buffer_cache_type = basic_character_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,

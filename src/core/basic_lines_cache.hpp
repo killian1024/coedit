@@ -9,7 +9,7 @@
 
 #include <kboost/kboost.hpp>
 
-#include "basic_characters_buffer_cache.hpp"
+#include "basic_character_buffer_cache.hpp"
 #include "basic_line.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
@@ -36,10 +36,15 @@ public:
     template<typename T>
     using allocator_type = typename TpAllocator::template rebind<T>::other;
     
-    using characters_buffer_cache_type = basic_characters_buffer_cache<
+    using characters_buffer_cache_type = basic_character_buffer_cache<
             TpChar,
             CHARACTERS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
+            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
+    >;
+    
+    using line_ids_buffer_cache_type = basic_ids_buffer_cache<
             CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
             CHARACTERS_BUFFER_IDS_BUFFER_SIZE
     >;
@@ -60,7 +65,12 @@ public:
     
     using const_iterator = typename cache_type::const_iterator;
     
-    basic_lines_cache() = default;
+    basic_lines_cache(eid_t editr_id)
+            : cche_()
+            , editr_id_(editr_id)
+            , swap_usd_(false)
+    {
+    }
     
     inline iterator begin() noexcept
     {
@@ -80,6 +90,16 @@ public:
     inline const_iterator cend() const noexcept
     {
         return cche_.cend();
+    }
+    
+    void lock(const_iterator it) noexcept
+    {
+        cche_.lock(it);
+    }
+    
+    void unlock(const_iterator it) noexcept
+    {
+        cche_.unlock(it);
     }
     
     iterator find(lid_t ky) noexcept
@@ -148,6 +168,12 @@ public:
     
 private:
     cache_type cche_;
+    
+    characters_buffer_ids_buffer_cache_type characters_buffer_ids_buffer_cche_;
+    
+    eid_t editr_id_;
+    
+    bool swap_usd_;
 };
 
 

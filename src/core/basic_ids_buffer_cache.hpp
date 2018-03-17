@@ -2,8 +2,8 @@
 // Created by Killian on 06/03/18.
 //
 
-#ifndef COEDIT_CORE_BASIC_CHARACTERS_BUFFER_IDS_BUFFER_CACHE_HPP
-#define COEDIT_CORE_BASIC_CHARACTERS_BUFFER_IDS_BUFFER_CACHE_HPP
+#ifndef COEDIT_CORE_BASIC_IDS_BUFFER_CACHE_HPP
+#define COEDIT_CORE_BASIC_IDS_BUFFER_CACHE_HPP
 
 #include <array>
 #include <cstdint>
@@ -12,7 +12,7 @@
 
 #include <kboost/kboost.hpp>
 
-#include "basic_characters_buffer_ids_buffer.hpp"
+#include "basic_ids_buffer.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
 
@@ -25,35 +25,36 @@ namespace stdfs = std::experimental::filesystem;
 
 
 template<
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE
+        std::size_t IDS_BUFFER_CACHE_SIZE,
+        std::size_t IDS_BUFFER_SIZE
 >
-class basic_characters_buffer_ids_buffer_cache
+class basic_ids_buffer_cache
 {
 public:
-    using characters_buffer_ids_buffer_type = basic_characters_buffer_ids_buffer<
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
+    using ids_buffer_type = basic_ids_buffer<
+            IDS_BUFFER_CACHE_SIZE,
+            IDS_BUFFER_SIZE
     >;
     
     using cache_type = kcontain::static_cache<
-            cbidsbid_t,
-            characters_buffer_ids_buffer_type,
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE
+            idsbid_t,
+            ids_buffer_type,
+            IDS_BUFFER_CACHE_SIZE
     >;
     
     using iterator = typename cache_type::iterator;
     
     using const_iterator = typename cache_type::const_iterator;
     
-    basic_characters_buffer_ids_buffer_cache(eid_t editr_id)
+    basic_ids_buffer_cache(eid_t editr_id, std::string file_id)
             : cche_()
             , editr_id_(editr_id)
+            , file_id_(std::move(file_id))
             , swap_usd_(false)
     {
     }
     
-    ~basic_characters_buffer_ids_buffer_cache() noexcept
+    ~basic_ids_buffer_cache() noexcept
     {
         if (swap_usd_)
         {
@@ -106,7 +107,7 @@ public:
         cche_.unlock(it);
     }
     
-    iterator find(cbidsbid_t cbidsbid)
+    iterator find(idsbid_t cbidsbid)
     {
         iterator it = cche_.find(cbidsbid);
         
@@ -121,7 +122,7 @@ public:
         return it;
     }
     
-    iterator find_and_lock(cbidsbid_t cbidsbid)
+    iterator find_and_lock(idsbid_t cbidsbid)
     {
         iterator it = cche_.find_and_lock(cbidsbid);
         
@@ -137,7 +138,7 @@ public:
     }
     
     template<typename TpValue_>
-    iterator insert(cbidsbid_t cbidsbid, TpValue_&& val)
+    iterator insert(idsbid_t cbidsbid, TpValue_&& val)
     {
         if (!cche_.is_least_recently_used_free() &&
             !cche_.get_least_recently_used_value().is_empty())
@@ -155,12 +156,12 @@ public:
             throw invalid_cbid_exception();
         }
         
-        cbidsbid_t cbidsbid = get_buffer_target(cbid);
+        idsbid_t cbidsbid = get_buffer_target(cbid);
         iterator it = find(cbidsbid);
         
         if (it.end())
         {
-            it = insert(cbidsbid, characters_buffer_ids_buffer_type(cbidsbid));
+            it = insert(cbidsbid, ids_buffer_type(cbidsbid));
         }
         
         it->set(get_byte_target(cbid), get_bit_target(cbid));
@@ -173,21 +174,21 @@ public:
             throw invalid_cbid_exception();
         }
         
-        cbidsbid_t cbidsbid = get_buffer_target(cbid);
+        idsbid_t cbidsbid = get_buffer_target(cbid);
         iterator it = find(cbidsbid);
         
         return it.end() ? false : it->is_set(get_byte_target(cbid), get_bit_target(cbid));
     }
 
 private:
-    inline cbidsbid_t get_buffer_target(cbid_t cbid)
+    inline idsbid_t get_buffer_target(cbid_t cbid)
     {
-        return cbid / (CHARACTERS_BUFFER_IDS_BUFFER_SIZE * 8);
+        return cbid / (IDS_BUFFER_SIZE * 8);
     }
     
-    inline cbidsboffset_t get_byte_target(cbid_t cbid)
+    inline idsboffset_t get_byte_target(cbid_t cbid)
     {
-        return static_cast<std::uint32_t>((cbid / 8) % CHARACTERS_BUFFER_IDS_BUFFER_SIZE);
+        return static_cast<std::uint32_t>((cbid / 8) % IDS_BUFFER_SIZE);
     }
     
     inline std::uint8_t get_bit_target(cbid_t cbid)
@@ -203,12 +204,14 @@ private:
         cbidsb_path.concat(std::to_string(ksys::get_pid()));
         cbidsb_path.concat("-");
         cbidsb_path.concat(std::to_string(editr_id_));
-        cbidsb_path.concat("-cbidsb-");
+        cbidsb_path.concat("-");
+        cbidsb_path.concat(file_id_);
+        cbidsb_path.concat("-");
         
         return cbidsb_path;
     }
     
-    stdfs::path get_characters_buffer_ids_path(cbidsbid_t cbidsbid)
+    stdfs::path get_characters_buffer_ids_path(idsbid_t cbidsbid)
     {
         stdfs::path cbidsb_path = get_characters_buffer_ids_base_path();
         cbidsb_path.concat(std::to_string(cbidsbid));
@@ -216,26 +219,26 @@ private:
         return cbidsb_path;
     }
     
-    void store_characters_buffer_ids(characters_buffer_ids_buffer_type& cbidsb)
+    void store_characters_buffer_ids(ids_buffer_type& cbidsb)
     {
-        cbidsb.store(get_characters_buffer_ids_path(cbidsb.get_cbidsbid()));
+        cbidsb.store(get_characters_buffer_ids_path(cbidsb.get_idsbid()));
         swap_usd_ = true;
     }
     
-    void load_characters_buffer_ids(cbidsbid_t cbidsbid)
+    void load_characters_buffer_ids(idsbid_t cbidsbid)
     {
         stdfs::path cbidsb_path = get_characters_buffer_ids_path(cbidsbid);
-        insert(cbidsbid, characters_buffer_ids_buffer_type(cbidsb_path));
+        insert(cbidsbid, ids_buffer_type(cbidsb_path));
         remove(cbidsb_path.c_str());
     }
     
-    bool try_load_characters_buffer_ids(cbidsbid_t cbidsbid)
+    bool try_load_characters_buffer_ids(idsbid_t cbidsbid)
     {
         stdfs::path cbidsb_path = get_characters_buffer_ids_path(cbidsbid);
         
         if (stdfs::exists(cbidsb_path))
         {
-            insert(cbidsbid, characters_buffer_ids_buffer_type(cbidsb_path));
+            insert(cbidsbid, ids_buffer_type(cbidsb_path));
             remove(cbidsb_path.c_str());
             
             return true;
@@ -244,7 +247,7 @@ private:
         {
             if (cche_.get_least_recently_used_value().is_empty())
             {
-                insert(cbidsbid, characters_buffer_ids_buffer_type(cbidsbid));
+                insert(cbidsbid, ids_buffer_type(cbidsbid));
             }
             
             return false;
@@ -255,6 +258,8 @@ private:
     cache_type cche_;
     
     eid_t editr_id_;
+    
+    std::string file_id_;
     
     bool swap_usd_;
 };

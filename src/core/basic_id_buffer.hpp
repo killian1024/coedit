@@ -20,66 +20,66 @@ namespace stdfs = std::experimental::filesystem;
 
 
 template<
-        std::size_t IDS_BUFFER_CACHE_SIZE,
-        std::size_t IDS_BUFFER_SIZE
+        std::size_t ID_BUFFER_SIZE,
+        std::size_t ID_BUFFER_CACHE_SIZE
 >
-class basic_ids_buffer
+class basic_id_buffer
 {
 public:
-    basic_ids_buffer()
+    basic_id_buffer()
             : buf_()
-            , idsbid_()
+            , idbid_()
     {
     }
     
-    basic_ids_buffer(idsbid_t idsbid)
+    basic_id_buffer(idbid_t idbid)
             : buf_()
-            , idsbid_(idsbid)
+            , idbid_(idbid)
     {
     }
     
-    basic_ids_buffer(const stdfs::path& idsb_path)
+    basic_id_buffer(const stdfs::path& idb_path)
             : buf_()
-            , idsbid_()
+            , idbid_()
     {
         std::ifstream ifs;
         
         ifs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-        ifs.open(idsb_path, std::ios::in | std::ios::binary);
+        ifs.open(idb_path, std::ios::in | std::ios::binary);
         
-        ifs.read((char*)&idsbid_, sizeof(idsbid_));
-        ifs.read((char*)buf_, sizeof(std::uint8_t) * IDS_BUFFER_SIZE);
+        ifs.read((char*)&idbid_, sizeof(idbid_));
+        ifs.read((char*)buf_, sizeof(std::uint8_t) * ID_BUFFER_SIZE);
         
         ifs.close();
     }
     
-    inline basic_ids_buffer& set(idsboffset_t byte_trg, std::uint8_t bit_trg) noexcept
+    inline basic_id_buffer& set(idboffset_t byte_trg, std::uint8_t bit_trg) noexcept
     {
         buf_[byte_trg] |= (1 << bit_trg);
         
         return *this;
     }
     
-    inline basic_ids_buffer& erase(idsboffset_t byte_trg, std::uint8_t bit_trg) noexcept
+    inline basic_id_buffer& erase(idboffset_t byte_trg, std::uint8_t bit_trg) noexcept
     {
         buf_[byte_trg] &= ~(1 << bit_trg);
         
         return *this;
     }
     
-    inline basic_ids_buffer& clear(idsboffset_t byte_trg) noexcept
+    inline basic_id_buffer& clear(idboffset_t byte_trg) noexcept
     {
         buf_[byte_trg] = 0;
         
         return *this;
     }
     
-    inline bool is_set(idsboffset_t byte_trg, std::uint8_t bit_trg) const noexcept
+    inline bool is_set(idboffset_t byte_trg, std::uint8_t bit_trg) const noexcept
     {
         return (buf_[byte_trg] & (1 << bit_trg)) != 0;
     }
     
-    inline bool is_empty(idsboffset_t byte_trg) const noexcept
+    inline bool is_empty(idboffset_t byte_trg) const noexcept
     {
         return buf_[byte_trg] == 0;
     }
@@ -97,28 +97,28 @@ public:
         return true;
     }
     
-    void store(const stdfs::path& idsb_path) const
+    void store(const stdfs::path& idb_path) const
     {
         std::ofstream ofs;
         
         ofs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-        ofs.open(idsb_path, std::ios::out | std::ios::binary);
+        ofs.open(idb_path, std::ios::out | std::ios::binary);
         
-        ofs.write((const char*)&idsbid_, sizeof(idsbid_));
-        ofs.write((const char*)&buf_, sizeof(std::uint8_t) * IDS_BUFFER_SIZE);
+        ofs.write((const char*)&idbid_, sizeof(idbid_));
+        ofs.write((const char*)&buf_, sizeof(std::uint8_t) * ID_BUFFER_SIZE);
         
         ofs.close();
     }
     
-    cbid_t get_idsbid() const noexcept
+    cbid_t get_idbid() const noexcept
     {
-        return idsbid_;
+        return idbid_;
     }
     
 private:
-    std::uint8_t buf_[IDS_BUFFER_SIZE];
+    std::uint8_t buf_[ID_BUFFER_SIZE];
     
-    idsbid_t idsbid_;
+    idbid_t idbid_;
 };
 
 

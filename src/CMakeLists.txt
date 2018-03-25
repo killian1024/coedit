@@ -8,15 +8,14 @@ set(CORE_SOURCE_FILES
         core/basic_file_editor.hpp
         core/basic_line.hpp
         core/fundamental_types.hpp
-        core/basic_lines_cache.hpp
+        core/basic_line_cache.hpp
         core/basic_character_buffer.hpp
         core/basic_character_buffer_cache.hpp
         core/file_editor_command.hpp
         core/core_exception.hpp
-        core/line_flags.hpp
         core/newline_format.hpp
         core/cursor_position.hpp
-        core/basic_ids_buffer_cache.hpp core/basic_ids_buffer.hpp)
+        core/basic_id_buffer_cache.hpp core/basic_id_buffer.hpp)
 
 set(TUI_SOURCE_FILES
         tui/curses_interface.hpp

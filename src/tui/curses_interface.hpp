@@ -16,11 +16,13 @@ namespace tui {
 
 template<
         typename TpChar,
-        std::size_t LINES_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
         typename TpAllocator
 >
 class curses_interface
@@ -33,11 +35,13 @@ public:
     
     using file_editor_type = core::basic_file_editor<
             char_type,
-            LINES_CACHE_SIZE,
-            CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            LINE_CACHE_SIZE,
+            LINE_ID_BUFFER_SIZE,
+            LINE_ID_BUFFER_CACHE_SIZE,
             allocator_type<int>
     >;
     
@@ -192,30 +196,36 @@ private:
 
 template<
         typename TpChar,
-        std::size_t LINES_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
         typename TpAllocator
 >
 curses_interface(
         core::basic_file_editor<
                 TpChar,
-                LINES_CACHE_SIZE,
-                CHARACTERS_BUFFER_CACHE_SIZE,
-                CHARACTERS_BUFFER_SIZE,
-                CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-                CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+                CHARACTER_BUFFER_SIZE,
+                CHARACTER_BUFFER_CACHE_SIZE,
+                CHARACTER_BUFFER_ID_BUFFER_SIZE,
+                CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+                LINE_CACHE_SIZE,
+                LINE_ID_BUFFER_SIZE,
+                LINE_ID_BUFFER_CACHE_SIZE,
                 TpAllocator
         >*
 ) -> curses_interface<
         TpChar,
-        LINES_CACHE_SIZE,
-        CHARACTERS_BUFFER_CACHE_SIZE,
-        CHARACTERS_BUFFER_SIZE,
-        CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-        CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+        CHARACTER_BUFFER_SIZE,
+        CHARACTER_BUFFER_CACHE_SIZE,
+        CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        LINE_CACHE_SIZE,
+        LINE_ID_BUFFER_SIZE,
+        LINE_ID_BUFFER_CACHE_SIZE,
         TpAllocator
 >;
 

@@ -7,13 +7,17 @@
 
 #include <cstdint>
 
-#define EMPTY (~0ull)
-#define LF (0xA)
-#define CR (0xD)
-
 
 namespace coedit {
 namespace core {
+
+
+enum
+{
+    EMPTY = (~0ull),
+    LF = (0xA),
+    CR = (0xD),
+};
 
 
 using eid_t = std::uint64_t;
@@ -22,8 +26,8 @@ using loffset_t = std::uint64_t;
 using coffset_t = std::uint64_t;
 using cbid_t = std::uint64_t;
 using cboffset_t = std::uint64_t;
-using idsbid_t = std::uint64_t;
-using idsboffset_t = std::uint64_t;
+using idbid_t = std::uint64_t;
+using idboffset_t = std::uint64_t;
 
 
 }

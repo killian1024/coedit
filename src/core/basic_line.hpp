@@ -10,9 +10,8 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_character_buffer_cache.hpp"
-#include "basic_lines_cache.hpp"
+#include "basic_line_cache.hpp"
 #include "fundamental_types.hpp"
-#include "line_flags.hpp"
 
 
 namespace coedit {
@@ -21,70 +20,76 @@ namespace core {
 
 template<
         typename TpChar,
-        std::size_t LINES_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
         typename TpAllocator
 >
-class basic_lines_cache;
+class basic_line_cache;
 
 
 template<
         typename TpChar,
-        std::size_t LINES_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-        std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
         typename TpAllocator
 >
 class basic_line
 {
 public:
-    using line_type = basic_line<
-            TpChar,
-            LINES_CACHE_SIZE,
-            CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
-            TpAllocator
-    >;
-    
     using char_type = TpChar;
     
     template<typename T>
     using allocator_type = typename TpAllocator::template rebind<T>::other;
     
-    using characters_buffer_type = basic_character_buffer<
+    using character_buffer_type = basic_character_buffer<
             TpChar,
-            CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
     >;
     
-    using characters_buffer_cache_type = basic_character_buffer_cache<
+    using character_buffer_cache_type = basic_character_buffer_cache<
             TpChar,
-            CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_SIZE
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
     >;
     
-    using lines_cache_type = basic_lines_cache<
+    using line_type = basic_line<
             TpChar,
-            LINES_CACHE_SIZE,
-            CHARACTERS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE,
-            CHARACTERS_BUFFER_IDS_BUFFER_SIZE,
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            LINE_CACHE_SIZE,
+            LINE_ID_BUFFER_SIZE,
+            LINE_ID_BUFFER_CACHE_SIZE,
             TpAllocator
     >;
     
-    using flags_type = kcontain::flags<line_flags>;
+    using line_cache_type = basic_line_cache<
+            TpChar,
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            LINE_CACHE_SIZE,
+            LINE_ID_BUFFER_SIZE,
+            LINE_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
+    >;
     
     class iterator : public kcontain::i_mutable_iterator<char_type, iterator>
     {
@@ -97,25 +102,25 @@ public:
     
         iterator() noexcept
                 : cur_({EMPTY, 0})
-                , chars_buf_cache_(nullptr)
+                , char_buf_cache_(nullptr)
         {
         }
     
         iterator(
                 node_type cur,
-                characters_buffer_cache_type* chars_buf_cache
+                character_buffer_cache_type* chars_buf_cache
         ) noexcept
                 : cur_(std::move(cur))
-                , chars_buf_cache_(chars_buf_cache)
+                , char_buf_cache_(chars_buf_cache)
         {
         }
         
         self_type& operator ++() noexcept override
         {
-            characters_buffer_type& current_cb =
-                    chars_buf_cache_->get_characters_buffer(cur_.first);
+            character_buffer_type& current_cb =
+                    char_buf_cache_->get_character_buffer(cur_.first);
             
-            if (cur_.second + 1 >= CHARACTERS_BUFFER_SIZE ||
+            if (cur_.second + 1 >= CHARACTER_BUFFER_SIZE ||
                 cur_.second + 1 >= current_cb.get_size())
             {
                 cur_.second = 0;
@@ -153,27 +158,29 @@ public:
         
         value_type& operator *() noexcept override
         {
-            characters_buffer_type& current_cb =
-                    chars_buf_cache_->get_characters_buffer(cur_.first);
+            character_buffer_type& current_cb =
+                    char_buf_cache_->get_character_buffer(cur_.first);
             
             return current_cb[cur_.second];
         }
         
         value_type* operator ->() noexcept override
         {
-            characters_buffer_type& current_cb =
-                    chars_buf_cache_->get_characters_buffer(cur_.first);
+            character_buffer_type& current_cb =
+                    char_buf_cache_->get_character_buffer(cur_.first);
             
             return &(current_cb[cur_.second]);
         }
         
         template<
                 typename TpChar__,
-                std::size_t LINES_CACHE_SIZE__,
-                std::size_t CHARACTERS_BUFFER_CACHE_SIZE__,
-                std::size_t CHARACTERS_BUFFER_SIZE__,
-                std::size_t CHARACTERS_BUFFER_IDS_BUFFER_CACHE_SIZE__,
-                std::size_t CHARACTERS_BUFFER_IDS_BUFFER_SIZE__,
+                std::size_t CHARACTER_BUFFER_SIZE__,
+                std::size_t CHARACTER_BUFFER_CACHE_SIZE__,
+                std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE__,
+                std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE__,
+                std::size_t LINE_CACHE_SIZE__,
+                std::size_t LINE_ID_BUFFER_SIZE__,
+                std::size_t LINE_ID_BUFFER_CACHE_SIZE__,
                 typename TpAllocator__
         >
         friend class basic_file_editor;
@@ -181,7 +188,7 @@ public:
     protected:
         node_type cur_;
     
-        characters_buffer_cache_type* chars_buf_cache_;
+        character_buffer_cache_type* char_buf_cache_;
     };
     
     basic_line()
@@ -191,8 +198,8 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , lnes_cache_(nullptr)
-            , chars_buf_cache_(nullptr)
+            , l_cache_(nullptr)
+            , cb_cache_(nullptr)
     {
     }
     
@@ -200,8 +207,8 @@ public:
             lid_t lid,
             lid_t prev,
             lid_t nxt,
-            lines_cache_type* lnes_cache,
-            characters_buffer_cache_type* chars_cache
+            character_buffer_cache_type* cb_cache,
+            line_cache_type* l_cache
     )
             : lid_(lid)
             , prev_(prev)
@@ -209,32 +216,55 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , lnes_cache_(lnes_cache)
-            , chars_buf_cache_(chars_cache)
+            , cb_cache_(cb_cache)
+            , l_cache_(l_cache)
     {
         if (prev_ == EMPTY)
         {
-            cbid_ = chars_buf_cache_->get_new_cbid();
+            cbid_ = cb_cache_->get_new_cbid();
             cboffset_ = 0;
-            chars_buf_cache_->insert(cbid_, characters_buffer_type(
-                    cbid_, EMPTY, EMPTY, chars_buf_cache_));
+            cb_cache_->insert(cbid_, character_buffer_type(
+                    cbid_, EMPTY, EMPTY, cb_cache_));
         }
         else
         {
-            line_type& prev_lne = lnes_cache_->get_line(prev_);
-            characters_buffer_type& prev_cb =
-                    chars_buf_cache_->get_characters_buffer(prev_lne.get_cbid());
+            line_type& prev_lne = l_cache_->get_line(prev_);
+            character_buffer_type& prev_cb =
+                    cb_cache_->get_character_buffer(prev_lne.cbid_);
             
             cbid_ = prev_cb.get_cbid();
-            cboffset_ = prev_lne.get_cboffset() + prev_lne.get_n_chars();
+            cboffset_ = prev_lne.cboffset_ + prev_lne.n_chars_;
             n_chars_ = prev_cb.get_line_length(cboffset_);
         }
     }
     
+    basic_line(
+            const stdfs::path& l_path,
+            character_buffer_cache_type* cb_cache,
+            line_cache_type* l_cache
+    )
+            : cb_cache_(cb_cache)
+            , l_cache_(l_cache)
+    {
+        std::ifstream ifs;
+        
+        ifs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+        ifs.open(l_path, std::ios::in | std::ios::binary);
+        
+        ifs.read((char*)&lid_, sizeof(lid_));
+        ifs.read((char*)&prev_, sizeof(prev_));
+        ifs.read((char*)&nxt_, sizeof(nxt_));
+        ifs.read((char*)&cbid_, sizeof(cbid_));
+        ifs.read((char*)&cboffset_, sizeof(cboffset_));
+        ifs.read((char*)&n_chars_, sizeof(n_chars_));
+        
+        ifs.close();
+    }
+    
     inline iterator begin() noexcept
     {
-        characters_buffer_type& current_cb =
-                chars_buf_cache_->get_characters_buffer(cbid_);
+        character_buffer_type& current_cb =
+                cb_cache_->get_character_buffer(cbid_);
     
         // todo : when the sharing buffers will be implemented, fix that shit :)
         try
@@ -252,17 +282,17 @@ public:
             return end();
         }
         
-        return iterator({cbid_, cboffset_}, chars_buf_cache_);
+        return iterator({cbid_, cboffset_}, cb_cache_);
     }
     
     inline iterator end() noexcept
     {
-        return iterator({EMPTY, 0}, chars_buf_cache_);
+        return iterator({EMPTY, 0}, cb_cache_);
     }
     
     void insert_character(char_type ch, loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
         
@@ -271,15 +301,15 @@ public:
         
         while (current_nxt_lid != EMPTY)
         {
-            nxt_lne = &(lnes_cache_->get_line(current_nxt_lid));
-            nxt_lne->increment_cboffset(1);
-            current_nxt_lid = nxt_lne->get_nxt();
+            nxt_lne = &(l_cache_->get_line(current_nxt_lid));
+            nxt_lne->cboffset_ += 1;
+            current_nxt_lid = nxt_lne->nxt_;
         }
     }
     
     void erase_character(loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
         
@@ -288,9 +318,9 @@ public:
     
         while (current_nxt_lid != EMPTY)
         {
-            nxt_lne = &(lnes_cache_->get_line(current_nxt_lid));
-            nxt_lne->increment_cboffset(~(lid_t)0);
-            current_nxt_lid = nxt_lne->get_nxt();
+            nxt_lne = &(l_cache_->get_line(current_nxt_lid));
+            nxt_lne->cboffset_ += ~(lid_t)0;
+            current_nxt_lid = nxt_lne->nxt_;
         }
     }
     
@@ -301,8 +331,8 @@ public:
             throw invalid_operation_exception();
         }
     
-        line_type* nxt_lne = &(lnes_cache_->get_line(nxt_));
-        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
+        line_type* nxt_lne = &(l_cache_->get_line(nxt_));
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         
         if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
         {
@@ -311,13 +341,13 @@ public:
         
         erase_character(n_chars_ - 1);
         
-        nxt_ = nxt_lne->get_nxt();
-        n_chars_ += nxt_lne->get_n_chars();
+        nxt_ = nxt_lne->nxt_;
+        n_chars_ += nxt_lne->n_chars_;
         
         if (nxt_ != EMPTY)
         {
-            nxt_lne = &(lnes_cache_->get_line(nxt_));
-            nxt_lne->set_prev(lid_);
+            nxt_lne = &(l_cache_->get_line(nxt_));
+            nxt_lne->prev_ = lid_;
         }
     }
     
@@ -328,7 +358,7 @@ public:
     
     bool can_go_right(loffset_t loffset)
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         auto val = current_cb[cboffset_ + loffset];
         
         return val != LF && val != CR && (nxt_ != EMPTY || loffset < n_chars_);
@@ -336,7 +366,7 @@ public:
     
     std::size_t get_line_length()
     {
-        characters_buffer_type& current_cb = chars_buf_cache_->get_characters_buffer(cbid_);
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         
         if (n_chars_ > 0)
         {
@@ -353,6 +383,23 @@ public:
         }
         
         return n_chars_;
+    }
+    
+    void store(const stdfs::path& l_path) const
+    {
+        std::ofstream ofs;
+        
+        ofs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+        ofs.open(l_path, std::ios::out | std::ios::binary);
+    
+        ofs.write((char*)&lid_, sizeof(lid_));
+        ofs.write((char*)&prev_, sizeof(prev_));
+        ofs.write((char*)&nxt_, sizeof(nxt_));
+        ofs.write((char*)&cbid_, sizeof(cbid_));
+        ofs.write((char*)&cboffset_, sizeof(cboffset_));
+        ofs.write((char*)&n_chars_, sizeof(n_chars_));
+        
+        ofs.close();
     }
     
     lid_t get_lid() const
@@ -380,36 +427,12 @@ public:
         nxt_ = nxt;
     }
     
-    cbid_t get_cbid() const
-    {
-        return cbid_;
-    }
-    
-    cboffset_t get_cboffset() const
-    {
-        return cboffset_;
-    }
-    
-    void increment_cboffset(cboffset_t cboffset)
-    {
-        cboffset_ += cboffset;
-    }
-    
-    std::size_t get_n_chars() const
-    {
-        return n_chars_;
-    }
-    
-    void set_n_chars(std::size_t n_chars)
+    void set_n_chars(size_t n_chars)
     {
         n_chars_ = n_chars;
     }
 
 private:
-    lines_cache_type* lnes_cache_;
-    
-    characters_buffer_cache_type* chars_buf_cache_;
-    
     lid_t lid_;
     
     lid_t prev_;
@@ -421,6 +444,10 @@ private:
     cboffset_t cboffset_;
     
     std::size_t n_chars_;
+    
+    character_buffer_cache_type* cb_cache_;
+    
+    line_cache_type* l_cache_;
 };
 
 

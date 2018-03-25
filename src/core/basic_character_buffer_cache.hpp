@@ -12,7 +12,7 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_character_buffer.hpp"
-#include "basic_ids_buffer_cache.hpp"
+#include "basic_id_buffer_cache.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
 
@@ -50,7 +50,7 @@ public:
             CHARACTER_BUFFER_CACHE_SIZE
     >;
     
-    using character_buffer_id_buffer_cache_type = basic_ids_buffer_cache<
+    using character_buffer_id_buffer_cache_type = basic_id_buffer_cache<
             CHARACTER_BUFFER_ID_BUFFER_SIZE,
             CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
     >;
@@ -60,9 +60,9 @@ public:
     using const_iterator = typename character_buffer_cache_type::const_iterator;
     
     basic_character_buffer_cache(eid_t editr_id)
-            : character_buffer_cche_()
-            , character_buffer_id_buffer_cche_(editr_id, "cbidsb")
-            , editr_id_(editr_id)
+            : cb_cache_()
+            , cbidb_cache_(editr_id, "cbidb")
+            , eid_(editr_id)
             , swap_usd_(false)
     {
     }
@@ -92,58 +92,58 @@ public:
     
     inline iterator begin() noexcept
     {
-        return character_buffer_cche_.begin();
+        return cb_cache_.begin();
     }
     
     inline const_iterator cbegin() const noexcept
     {
-        return character_buffer_cche_.cbegin();
+        return cb_cache_.cbegin();
     }
     
     inline iterator end() noexcept
     {
-        return character_buffer_cche_.end();
+        return cb_cache_.end();
     }
     
     inline const_iterator cend() const noexcept
     {
-        return character_buffer_cche_.cend();
+        return cb_cache_.cend();
     }
     
     void lock(const_iterator& it) noexcept
     {
-        character_buffer_cche_.lock(it);
+        cb_cache_.lock(it);
     }
     
     void lock(cbid_t cbid) noexcept
     {
-        character_buffer_cche_.lock(cbid);
+        cb_cache_.lock(cbid);
     }
     
     void unlock(const_iterator& it) noexcept
     {
-        character_buffer_cche_.unlock(it);
+        cb_cache_.unlock(it);
     }
     
     void unlock(cbid_t cbid) noexcept
     {
-        character_buffer_cche_.unlock(cbid);
+        cb_cache_.unlock(cbid);
     }
     
     iterator find(cbid_t cbid)
     {
         if (cbid == EMPTY)
         {
-            return character_buffer_cche_.end();
+            return cb_cache_.end();
         }
         
-        iterator it = character_buffer_cche_.find(cbid);
+        iterator it = cb_cache_.find(cbid);
         
         if (it.end() && swap_usd_)
         {
             if (try_load_character_buffer(cbid))
             {
-                it = character_buffer_cche_.find(cbid);
+                it = cb_cache_.find(cbid);
             }
         }
         
@@ -166,13 +166,13 @@ public:
             throw invalid_cbid_exception();
         }
         
-        if (!character_buffer_cche_.is_least_recently_used_free())
+        if (!cb_cache_.is_least_recently_used_free())
         {
-            store_character_buffer(character_buffer_cche_.get_least_recently_used());
+            store_character_buffer(cb_cache_.get_least_recently_used());
         }
         
-        character_buffer_id_buffer_cche_.set(cbid);
-        return character_buffer_cche_.insert(cbid, std::forward<TpValue_>(val));
+        cbidb_cache_.set(cbid);
+        return cb_cache_.insert(cbid, std::forward<TpValue_>(val));
     }
     
     character_buffer_type& get_character_buffer(cbid_t cbid)
@@ -254,7 +254,7 @@ private:
         cb_path.append("coedit-");
         cb_path.concat(std::to_string(ksys::get_pid()));
         cb_path.concat("-");
-        cb_path.concat(std::to_string(editr_id_));
+        cb_path.concat(std::to_string(eid_));
         cb_path.concat("-cb-");
         
         return cb_path;
@@ -283,7 +283,7 @@ private:
     
     bool try_load_character_buffer(cbid_t cbid)
     {
-        if (character_buffer_id_buffer_cche_.is_set(cbid))
+        if (cbidb_cache_.is_set(cbid))
         {
             stdfs::path cb_path = get_character_buffer_path(cbid);
             insert(cbid, character_buffer_type(cb_path, this));
@@ -297,11 +297,11 @@ private:
     }
 
 private:
-    character_buffer_cache_type character_buffer_cche_;
+    character_buffer_cache_type cb_cache_;
     
-    character_buffer_id_buffer_cache_type character_buffer_id_buffer_cche_;
+    character_buffer_id_buffer_cache_type cbidb_cache_;
     
-    eid_t editr_id_;
+    eid_t eid_;
     
     bool swap_usd_;
 };

@@ -19,8 +19,24 @@ TEST(basic_characters_buffer, insert_character)
     cc::cboffset_t cboffst = 0;
     chatacters_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
+    
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character('\n', cboffst++);
+    cb.insert_character('\n', cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    cb.insert_character(ch++, cboffst++);
+    
+    ASSERT_TRUE(cb[6] == '\n');
+    ASSERT_TRUE(cb[11] == ch - 1);
 }
 
 
@@ -33,7 +49,7 @@ TEST(basic_characters_buffer, erase_character)
     cc::cboffset_t cboffst = 0;
     chatacters_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     cb.insert_character(ch++, cboffst++);
@@ -66,7 +82,7 @@ TEST(basic_characters_buffer, get_line_length)
     cc::cboffset_t cboffst = 0;
     chatacters_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     cb.insert_character(ch++, cboffst++);
@@ -98,7 +114,7 @@ TEST(basic_characters_buffer, operator_subscript)
     chatacters_buffer_cache cb_cache(0);
     std::size_t i;
     
-    cb_cache.insert(0, chatacters_buffer(0, EMPTY, EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     for (ch = 33, cboffst = 0;

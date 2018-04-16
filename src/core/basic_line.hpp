@@ -12,6 +12,7 @@
 #include "basic_character_buffer_cache.hpp"
 #include "basic_line_cache.hpp"
 #include "fundamental_types.hpp"
+#include "newline_format.hpp"
 
 
 namespace coedit {
@@ -221,10 +222,8 @@ public:
     {
         if (prev_ == EMPTY)
         {
-            cbid_ = cb_cache_->get_new_cbid();
-            cboffset_ = 0;
-            cb_cache_->insert(cbid_, character_buffer_type(
-                    cbid_, EMPTY, EMPTY, cb_cache_));
+            auto it_cb = cb_cache->insert_first_character_buffer();
+            cbid_ = it_cb->get_cbid();
         }
         else
         {
@@ -234,7 +233,15 @@ public:
             
             cbid_ = prev_cb.get_cbid();
             cboffset_ = prev_lne.cboffset_ + prev_lne.n_chars_;
-            n_chars_ = prev_cb.get_line_length(cboffset_);
+            
+            if (nxt_ == EMPTY && prev_cb.get_size() - 1 < cboffset_)
+            {
+                n_chars_ = 0;
+            }
+            else
+            {
+                n_chars_ = prev_cb.get_line_length(cboffset_);
+            }
         }
     }
     
@@ -290,18 +297,23 @@ public:
         return iterator({EMPTY, 0}, cb_cache_);
     }
     
-    void insert_character(char_type ch, loffset_t loffset)
+    void insert_character(char_type ch, loffset_t loffset) // todo : get the return of the buffer insertion
     {
         character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
-        
+    
         current_cb.insert_character(ch, cboffset_ + loffset);
         ++n_chars_;
-        
+    
         while (current_nxt_lid != EMPTY)
         {
             nxt_lne = &(l_cache_->get_line(current_nxt_lid));
+            if (nxt_lne->cbid_ != cbid_)
+            {
+                break;
+            }
+        
             nxt_lne->cboffset_ += 1;
             current_nxt_lid = nxt_lne->nxt_;
         }
@@ -319,6 +331,11 @@ public:
         while (current_nxt_lid != EMPTY)
         {
             nxt_lne = &(l_cache_->get_line(current_nxt_lid));
+            if (nxt_lne->cbid_ != cbid_)
+            {
+                break;
+            }
+            
             nxt_lne->cboffset_ += ~(lid_t)0;
             current_nxt_lid = nxt_lne->nxt_;
         }
@@ -334,16 +351,16 @@ public:
         line_type* nxt_lne = &(l_cache_->get_line(nxt_));
         character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         
+        // Erase the endline characters.
         if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
         {
             erase_character(n_chars_ - 1);
         }
-        
         erase_character(n_chars_ - 1);
         
+        // Assigning the pointers to the new target.
         nxt_ = nxt_lne->nxt_;
         n_chars_ += nxt_lne->n_chars_;
-        
         if (nxt_ != EMPTY)
         {
             nxt_lne = &(l_cache_->get_line(nxt_));
@@ -400,6 +417,13 @@ public:
         ofs.write((char*)&n_chars_, sizeof(n_chars_));
         
         ofs.close();
+    }
+    
+    char_type& operator [](loffset_t i)
+    {
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
+        
+        return current_cb[cboffset_ + i];
     }
     
     lid_t get_lid() const

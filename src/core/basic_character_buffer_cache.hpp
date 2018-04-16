@@ -158,21 +158,28 @@ public:
         return it;
     }
     
-    template<typename TpValue_>
-    iterator insert(cbid_t cbid, TpValue_&& val)
+    iterator insert_first_character_buffer()
     {
-        if (cbid == EMPTY)
-        {
-            throw invalid_cbid_exception();
-        }
+        cbid_t new_cbid = get_new_cbid();
         
-        if (!cb_cache_.is_least_recently_used_free())
-        {
-            store_character_buffer(cb_cache_.get_least_recently_used());
-        }
+        return insert_character_buffer_in_cache(new_cbid, character_buffer_type(
+                new_cbid, EMPTY, EMPTY, this));
+    }
+    
+    iterator insert_character_buffer_after(cbid_t cbid)
+    {
+        cbid_t new_cbid = get_new_cbid();
+        character_buffer_type& current_cb = get_character_buffer(cbid);
+        iterator it_new_cb;
+        cboffset_t half_size;
         
-        cbidb_cache_.set(cbid);
-        return cb_cache_.insert(cbid, std::forward<TpValue_>(val));
+        it_new_cb = insert_character_buffer_in_cache(new_cbid, character_buffer_type(
+                new_cbid, EMPTY, EMPTY, this));
+        
+        current_cb.link_character_buffer_after_current(it_new_cb->get_cbid());
+        current_cb.move_characters_to(it_new_cb->get_cbid());
+        
+        return it_new_cb;
     }
     
     character_buffer_type& get_character_buffer(cbid_t cbid)
@@ -217,6 +224,7 @@ public:
         }
     }
     
+private:
     cbid_t get_new_cbid()
     {
         static cbid_t old_cbid = EMPTY;
@@ -231,7 +239,7 @@ public:
             {
                 ++new_cbid;
             }
-    
+            
             it = find(new_cbid);
             
         } while (new_cbid != old_cbid && !it.end());
@@ -240,13 +248,30 @@ public:
         {
             throw length_exception();
         }
-    
+        
         old_cbid = new_cbid;
         
         return new_cbid;
     }
     
-private:
+    template<typename TpValue_>
+    iterator insert_character_buffer_in_cache(cbid_t cbid, TpValue_&& val)
+    {
+        if (cbid == EMPTY)
+        {
+            throw invalid_cbid_exception();
+        }
+        
+        if (!cb_cache_.is_least_recently_used_free())
+        {
+            store_character_buffer(cb_cache_.get_least_recently_used());
+        }
+        
+        cbidb_cache_.set(cbid);
+        
+        return cb_cache_.insert(cbid, std::forward<TpValue_>(val));
+    }
+    
     stdfs::path get_character_buffer_base_path()
     {
         stdfs::path cb_path = ".";
@@ -277,7 +302,7 @@ private:
     void load_character_buffer(cbid_t cbid)
     {
         stdfs::path cb_path = get_character_buffer_path(cbid);
-        insert(cbid, character_buffer_type(cb_path, this));
+        insert_character_buffer_in_cache(cbid, character_buffer_type(cb_path, this));
         remove(cb_path.c_str());
     }
     
@@ -286,7 +311,7 @@ private:
         if (cbidb_cache_.is_set(cbid))
         {
             stdfs::path cb_path = get_character_buffer_path(cbid);
-            insert(cbid, character_buffer_type(cb_path, this));
+            insert_character_buffer_in_cache(cbid, character_buffer_type(cb_path, this));
             remove(cb_path.c_str());
             return true;
         }

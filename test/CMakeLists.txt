@@ -9,7 +9,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(coedit_test
         main.cpp
-        core_test/basic_file_editor_test.cpp core_test/basic_characters_buffer_test.cpp core_test/basic_line_test.cpp)
+        core_test/basic_file_editor_test.cpp
+        core_test/basic_character_buffer_test.cpp
+        core_test/basic_line_test.cpp)
 
 target_link_libraries(coedit_test -lkboost ${GTEST_BOTH_LIBRARIES} -lpthread)
 target_link_libraries(coedit_test coedit_core coedit_tui)

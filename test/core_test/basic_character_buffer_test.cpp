@@ -12,14 +12,14 @@ namespace cc = coedit::core;
 
 TEST(basic_characters_buffer, insert_character)
 {
-    using chatacters_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacters_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
     
-    chatacters_buffer_cache cb_cache(0);
+    chatacter_buffer_cache cb_cache(0);
     cc::cboffset_t cboffst = 0;
-    chatacters_buffer::char_type ch = 65;
+    chatacter_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     cb.insert_character(ch++, cboffst++);
@@ -42,14 +42,14 @@ TEST(basic_characters_buffer, insert_character)
 
 TEST(basic_characters_buffer, erase_character)
 {
-    using chatacters_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacters_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
     
-    chatacters_buffer_cache cb_cache(0);
+    chatacter_buffer_cache cb_cache(0);
     cc::cboffset_t cboffst = 0;
-    chatacters_buffer::char_type ch = 65;
+    chatacter_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     cb.insert_character(ch++, cboffst++);
@@ -75,14 +75,14 @@ TEST(basic_characters_buffer, erase_character)
 
 TEST(basic_characters_buffer, get_line_length)
 {
-    using chatacters_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacters_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
     
-    chatacters_buffer_cache cb_cache(0);
+    chatacter_buffer_cache cb_cache(0);
     cc::cboffset_t cboffst = 0;
-    chatacters_buffer::char_type ch = 65;
+    chatacter_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     cb.insert_character(ch++, cboffst++);
@@ -106,15 +106,15 @@ TEST(basic_characters_buffer, get_line_length)
 
 TEST(basic_characters_buffer, operator_subscript)
 {
-    using chatacters_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacters_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
     
     cc::cboffset_t cboffst;
-    chatacters_buffer::char_type ch;
-    chatacters_buffer_cache cb_cache(0);
+    chatacter_buffer::char_type ch;
+    chatacter_buffer_cache cb_cache(0);
     std::size_t i;
     
-    cb_cache.insert(0, chatacters_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
+    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
     auto& cb = cb_cache.get_character_buffer_and_lock(0);
     
     for (ch = 33, cboffst = 0;

@@ -161,29 +161,59 @@ public:
         return it;
     }
     
-    iterator find_and_lock(cbid_t cbid)
+    iterator find_and_lock(lid_t lid)
     {
-        iterator it = find(cbid);
+        iterator it = find(lid);
         lock(it);
         
         return it;
     }
     
-    template<typename TpValue_>
-    iterator insert(lid_t lid, TpValue_&& val)
+    iterator insert_first_line()
     {
-        if (lid == EMPTY)
-        {
-            throw invalid_lid_exception();
-        }
+        lid_t new_lid = get_new_lid();
         
-        if (!l_cache_.is_least_recently_used_free())
+        return insert_line_in_cache(new_lid, line_type(
+                new_lid, EMPTY, EMPTY, cb_cache_, this));
+    }
+    
+    iterator insert_line_after(lid_t lid, loffset_t loffset, newline_format newl_format)
+    {
+        lid_t new_lid = get_new_lid();
+        line_type& current_lne = get_line(lid);
+        iterator it_newline;
+    
+        switch (newl_format)
         {
-            store_line(l_cache_.get_least_recently_used());
+            case newline_format::UNIX:
+                current_lne.insert_character(LF, loffset);
+                break;
+        
+            case newline_format::MAC:
+                current_lne.insert_character(CR, loffset);
+                break;
+        
+            case newline_format::WINDOWS:
+                current_lne.insert_character(CR, loffset);
+                ++loffset;
+                current_lne.insert_character(LF, loffset);
+                break;
         }
     
-        lidb_cache_.set(lid);
-        return l_cache_.insert(lid, std::forward<TpValue_>(val));
+        current_lne.set_n_chars(loffset + 1);
+    
+        it_newline = insert_line_in_cache(new_lid, line_type(
+                new_lid, lid, current_lne.get_nxt(), cb_cache_, this));
+    
+        if (current_lne.get_nxt() != EMPTY)
+        {
+            line_type& nxt_lne = get_line(current_lne.get_nxt());
+            nxt_lne.set_prev(new_lid);
+        }
+    
+        current_lne.set_nxt(new_lid);
+    
+        return it_newline;
     }
     
     line_type& get_line(lid_t lid)
@@ -227,7 +257,8 @@ public:
             throw invalid_lid_exception();
         }
     }
-    
+
+private:
     lid_t get_new_lid()
     {
         static lid_t old_lid = EMPTY;
@@ -256,8 +287,25 @@ public:
         
         return new_lid;
     }
-
-private:
+    
+    template<typename TpValue_>
+    iterator insert_line_in_cache(lid_t lid, TpValue_&& val)
+    {
+        if (lid == EMPTY)
+        {
+            throw invalid_lid_exception();
+        }
+        
+        if (!l_cache_.is_least_recently_used_free())
+        {
+            store_line(l_cache_.get_least_recently_used());
+        }
+        
+        lidb_cache_.set(lid);
+        
+        return l_cache_.insert(lid, std::forward<TpValue_>(val));
+    }
+    
     stdfs::path get_line_base_path()
     {
         stdfs::path l_path = ".";
@@ -288,7 +336,7 @@ private:
     void load_line(lid_t lid)
     {
         stdfs::path l_path = get_line_path(lid);
-        insert(lid, line_type(l_path, cb_cache_, this));
+        insert_line_in_cache(lid, line_type(l_path, cb_cache_, this));
         remove(l_path.c_str());
     }
     
@@ -297,7 +345,7 @@ private:
         if (lidb_cache_.is_set(lid))
         {
             stdfs::path l_path = get_line_path(lid);
-            insert(lid, line_type(l_path, cb_cache_, this));
+            insert_line_in_cache(lid, line_type(l_path, cb_cache_, this));
             remove(l_path.c_str());
             return true;
         }

@@ -166,11 +166,10 @@ public:
     {
         current_eid_ = klow::add(current_eid_, 1);
         
-        current_lid_ = l_cache_.get_new_lid();
+        auto it_lne = l_cache_.insert_first_line(newl_format_);
+        current_lid_ = it_lne->get_lid();
         first_lid_ = current_lid_;
         first_display_lid_ = current_lid_;
-        l_cache_.insert(current_lid_, line_type(
-                current_lid_, EMPTY, EMPTY, &cb_cache_, &l_cache_));
     }
     
     inline iterator begin() noexcept
@@ -235,42 +234,51 @@ public:
 private:
     bool handle_newline()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
+        //line_type& current_lne = l_cache_.get_line(current_lid_);
+        //
+        //switch (newl_format_)
+        //{
+        //    case newline_format::UNIX:
+        //        current_lne.insert_character(LF, cursor_pos_.loffset);
+        //        break;
+        //
+        //    case newline_format::MAC:
+        //        current_lne.insert_character(CR, cursor_pos_.loffset);
+        //        break;
+        //
+        //    case newline_format::WINDOWS:
+        //        current_lne.insert_character(CR, cursor_pos_.loffset);
+        //        ++cursor_pos_.loffset;
+        //        current_lne.insert_character(LF, cursor_pos_.loffset);
+        //        break;
+        //}
+        //
+        //current_lne.set_n_chars(cursor_pos_.loffset + 1);
+        //
+        //lid_t new_lid = l_cache_.get_new_lid();
+        //
+        //l_cache_.insert(new_lid, line_type(
+        //        new_lid, current_lne.get_lid(), current_lne.get_nxt(),
+        //        &cb_cache_, &l_cache_));
+        //
+        //if (current_lne.get_nxt() != EMPTY)
+        //{
+        //    line_type& nxt_lne = l_cache_.get_line(current_lne.get_nxt());
+        //    nxt_lne.set_prev(new_lid);
+        //}
+        //
+        //current_lne.set_nxt(new_lid);
+        //
+        //current_lid_ = new_lid;
+        //cursor_pos_.loffset = 0;
+        //++n_lnes_;
+        //++cursor_pos_.coffset;
+        //
+        //return true;
         
-        switch (newl_format_)
-        {
-            case newline_format::UNIX:
-                current_lne.insert_character(LF, cursor_pos_.loffset);
-                break;
-            
-            case newline_format::MAC:
-                current_lne.insert_character(CR, cursor_pos_.loffset);
-                break;
-            
-            case newline_format::WINDOWS:
-                current_lne.insert_character(CR, cursor_pos_.loffset);
-                ++cursor_pos_.loffset;
-                current_lne.insert_character(LF, cursor_pos_.loffset);
-                break;
-        }
+        auto it_lne = l_cache_.insert_line_after(current_lid_, cursor_pos_.loffset, newl_format_);
         
-        current_lne.set_n_chars(cursor_pos_.loffset + 1);
-        
-        lid_t new_lid = l_cache_.get_new_lid();
-        
-        l_cache_.insert(new_lid, line_type(
-                new_lid, current_lne.get_lid(), current_lne.get_nxt(),
-                &cb_cache_, &l_cache_));
-        
-        if (current_lne.get_nxt() != EMPTY)
-        {
-            line_type& nxt_lne = l_cache_.get_line(current_lne.get_nxt());
-            nxt_lne.set_prev(new_lid);
-        }
-        
-        current_lne.set_nxt(new_lid);
-        
-        current_lid_ = new_lid;
+        current_lid_ = it_lne->get_nxt();
         cursor_pos_.loffset = 0;
         ++n_lnes_;
         ++cursor_pos_.coffset;

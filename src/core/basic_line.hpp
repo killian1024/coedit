@@ -206,6 +206,25 @@ public:
     
     basic_line(
             lid_t lid,
+            character_buffer_cache_type* cb_cache,
+            line_cache_type* l_cache
+    )
+            : lid_(lid)
+            , prev_(EMPTY)
+            , nxt_(EMPTY)
+            , cbid_(EMPTY)
+            , cboffset_(0)
+            , n_chars_(0)
+            , cb_cache_(cb_cache)
+            , l_cache_(l_cache)
+    {
+        auto it_cb = cb_cache->insert_first_character_buffer();
+        cbid_ = it_cb->get_cbid();
+    }
+    
+    // HERE : construir basandose en previous, nxt ya ne se pasa como parámetro.
+    basic_line(
+            lid_t lid,
             lid_t prev,
             lid_t nxt,
             character_buffer_cache_type* cb_cache,

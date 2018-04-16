@@ -64,6 +64,7 @@ public:
             , cbidb_cache_(editr_id, "cbidb")
             , eid_(editr_id)
             , swap_usd_(false)
+            , old_cbid_(EMPTY)
     {
     }
     
@@ -153,7 +154,11 @@ public:
     iterator find_and_lock(cbid_t cbid)
     {
         iterator it = find(cbid);
-        lock(it);
+        
+        if (!it.end())
+        {
+            lock(it);
+        }
     
         return it;
     }
@@ -162,8 +167,7 @@ public:
     {
         cbid_t new_cbid = get_new_cbid();
         
-        return insert_character_buffer_in_cache(new_cbid, character_buffer_type(
-                new_cbid, EMPTY, EMPTY, this));
+        return insert_character_buffer_in_cache(new_cbid, character_buffer_type(new_cbid, this));
     }
     
     iterator insert_character_buffer_after(cbid_t cbid)
@@ -171,13 +175,9 @@ public:
         cbid_t new_cbid = get_new_cbid();
         character_buffer_type& current_cb = get_character_buffer(cbid);
         iterator it_new_cb;
-        cboffset_t half_size;
         
         it_new_cb = insert_character_buffer_in_cache(new_cbid, character_buffer_type(
-                new_cbid, EMPTY, EMPTY, this));
-        
-        current_cb.link_character_buffer_after_current(it_new_cb->get_cbid());
-        current_cb.move_characters_to(it_new_cb->get_cbid());
+                new_cbid, cbid, this));
         
         return it_new_cb;
     }
@@ -210,25 +210,10 @@ public:
         }
     }
     
-    void unlock_character_buffer(cbid_t cbid)
-    {
-        iterator it = find(cbid);
-        
-        if (!it.end())
-        {
-            unlock(it);
-        }
-        else
-        {
-            throw invalid_cbid_exception();
-        }
-    }
-    
 private:
     cbid_t get_new_cbid()
     {
-        static cbid_t old_cbid = EMPTY;
-        cbid_t new_cbid = old_cbid;
+        cbid_t new_cbid = old_cbid_;
         iterator it;
         
         do
@@ -242,14 +227,14 @@ private:
             
             it = find(new_cbid);
             
-        } while (new_cbid != old_cbid && !it.end());
+        } while (new_cbid != old_cbid_ && !it.end());
         
-        if (new_cbid == old_cbid)
+        if (new_cbid == old_cbid_)
         {
             throw length_exception();
         }
-        
-        old_cbid = new_cbid;
+    
+        old_cbid_ = new_cbid;
         
         return new_cbid;
     }
@@ -329,6 +314,8 @@ private:
     eid_t eid_;
     
     bool swap_usd_;
+    
+    cbid_t old_cbid_;
 };
 
 

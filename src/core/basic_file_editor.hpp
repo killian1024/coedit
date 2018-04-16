@@ -166,7 +166,7 @@ public:
     {
         current_eid_ = klow::add(current_eid_, 1);
         
-        auto it_lne = l_cache_.insert_first_line(newl_format_);
+        auto it_lne = l_cache_.insert_first_line();
         current_lid_ = it_lne->get_lid();
         first_lid_ = current_lid_;
         first_display_lid_ = current_lid_;

@@ -19,24 +19,24 @@ TEST(basic_characters_buffer, insert_character)
     cc::cboffset_t cboffst = 0;
     chatacter_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
-    auto& cb = cb_cache.get_character_buffer_and_lock(0);
+    auto it_cb = cb_cache.insert_first_character_buffer();
+    cb_cache.lock(it_cb);
     
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character('\n', cboffst++);
-    cb.insert_character('\n', cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character('\n', cboffst++);
+    it_cb->insert_character('\n', cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
     
-    ASSERT_TRUE(cb[6] == '\n');
-    ASSERT_TRUE(cb[11] == ch - 1);
+    ASSERT_TRUE((*it_cb)[6] == '\n');
+    ASSERT_TRUE((*it_cb)[11] == ch - 1);
 }
 
 
@@ -49,27 +49,27 @@ TEST(basic_characters_buffer, erase_character)
     cc::cboffset_t cboffst = 0;
     chatacter_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
-    auto& cb = cb_cache.get_character_buffer_and_lock(0);
+    auto it_cb = cb_cache.insert_first_character_buffer();
+    cb_cache.lock(it_cb);
     
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character('\n', cboffst++);
-    cb.insert_character('\n', cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character('\n', cboffst++);
+    it_cb->insert_character('\n', cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
     
-    cb.erase_character(4);
-    cb.erase_character(9);
+    it_cb->erase_character(4);
+    it_cb->erase_character(9);
     
-    ASSERT_TRUE(cb[4] == '\n');
-    ASSERT_TRUE(cb[9] == ch - 1);
+    ASSERT_TRUE((*it_cb)[4] == '\n');
+    ASSERT_TRUE((*it_cb)[9] == ch - 1);
 }
 
 
@@ -82,25 +82,25 @@ TEST(basic_characters_buffer, get_line_length)
     cc::cboffset_t cboffst = 0;
     chatacter_buffer::char_type ch = 65;
     
-    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
-    auto& cb = cb_cache.get_character_buffer_and_lock(0);
+    auto it_cb = cb_cache.insert_first_character_buffer();
+    cb_cache.lock(it_cb);
     
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character('\n', cboffst++);
-    cb.insert_character('\n', cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
-    cb.insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character('\n', cboffst++);
+    it_cb->insert_character('\n', cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
+    it_cb->insert_character(ch++, cboffst++);
     
-    ASSERT_TRUE(cb.get_line_length(0) == 6);
-    ASSERT_TRUE(cb.get_line_length(6) == 1);
-    ASSERT_TRUE(cb.get_line_length(7) == 5);
+    ASSERT_TRUE(it_cb->get_line_length(0) == 6);
+    ASSERT_TRUE(it_cb->get_line_length(6) == 1);
+    ASSERT_TRUE(it_cb->get_line_length(7) == 5);
 }
 
 
@@ -114,22 +114,22 @@ TEST(basic_characters_buffer, operator_subscript)
     chatacter_buffer_cache cb_cache(0);
     std::size_t i;
     
-    cb_cache.insert(0, chatacter_buffer(0, cc::EMPTY, cc::EMPTY, &cb_cache));
-    auto& cb = cb_cache.get_character_buffer_and_lock(0);
+    auto it_cb = cb_cache.insert_first_character_buffer();
+    cb_cache.lock(it_cb);
     
     for (ch = 33, cboffst = 0;
          ch < 127;
          ++ch, ++cboffst)
     {
-        cb.insert_character(ch, cboffst);
+        it_cb->insert_character(ch, cboffst);
     }
     
     for (i = 0, ch = 33;
          ch < 127;
          ++i, ++ch)
     {
-        ASSERT_TRUE(cb[i] == ch);
+        ASSERT_TRUE((*it_cb)[i] == ch);
     }
     
-    cb_cache.unlock_character_buffer(0);
+    cb_cache.unlock(it_cb);
 }

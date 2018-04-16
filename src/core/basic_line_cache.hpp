@@ -75,6 +75,7 @@ public:
             , lidb_cache_(eid, "lidb")
             , eid_(eid)
             , swap_usd_(false)
+            , old_lid_(EMPTY)
     {
     }
     
@@ -164,7 +165,11 @@ public:
     iterator find_and_lock(lid_t lid)
     {
         iterator it = find(lid);
-        lock(it);
+        
+        if (!it.end())
+        {
+            lock(it);
+        }
         
         return it;
     }
@@ -243,26 +248,11 @@ public:
             throw invalid_lid_exception();
         }
     }
-    
-    void unlock_line(lid_t lid)
-    {
-        iterator it = find(lid);
-        
-        if (!it.end())
-        {
-            unlock(it);
-        }
-        else
-        {
-            throw invalid_lid_exception();
-        }
-    }
 
 private:
     lid_t get_new_lid()
     {
-        static lid_t old_lid = EMPTY;
-        lid_t new_lid = old_lid;
+        lid_t new_lid = old_lid_;
         iterator it;
         
         do
@@ -276,14 +266,14 @@ private:
             
             it = find(new_lid);
             
-        } while (new_lid != old_lid && !it.end());
+        } while (new_lid != old_lid_ && !it.end());
         
-        if (new_lid == old_lid)
+        if (new_lid == old_lid_)
         {
             throw length_exception();
         }
-        
-        old_lid = new_lid;
+    
+        old_lid_ = new_lid;
         
         return new_lid;
     }
@@ -365,6 +355,8 @@ private:
     eid_t eid_;
     
     bool swap_usd_;
+    
+    lid_t old_lid_;
 };
 
 

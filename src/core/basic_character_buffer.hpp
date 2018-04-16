@@ -85,17 +85,33 @@ public:
     
     basic_character_buffer(
             cbid_t cbid,
+            character_buffer_cache_type* chars_buf_cache
+    )
+            : buf_()
+            , cbid_(cbid)
+            , prev_(EMPTY)
+            , nxt_(EMPTY)
+            , size_(0)
+            , cb_cache_(chars_buf_cache)
+    {
+    }
+    
+    basic_character_buffer(
+            cbid_t cbid,
             cbid_t prev,
-            cbid_t nxt,
             character_buffer_cache_type* chars_buf_cache
     )
             : buf_()
             , cbid_(cbid)
             , prev_(prev)
-            , nxt_(nxt)
+            , nxt_(EMPTY)
             , size_(0)
             , cb_cache_(chars_buf_cache)
     {
+        character_buffer_type& prev_cb = cb_cache_->get_character_buffer(prev_);
+        
+        prev_cb.link_character_buffer_after_current(*this);
+        prev_cb.move_characters_to(*this);
     }
     
     basic_character_buffer(
@@ -148,7 +164,8 @@ public:
         return *this;
     }
     
-    operation_done insert_character(char_type ch, cboffset_t cboffset) // todo : return the operation done.
+    // todo : return the operation done.
+    operation_done insert_character(char_type ch, cboffset_t cboffset)
     {
         operation_done op_done;
         character_buffer_type* cur_cb = &get_character_buffer_for_insertion(&cboffset);
@@ -160,42 +177,37 @@ public:
         
         if (cboffset > cur_cb->size_)
         {
-            if (nxt_ == EMPTY)
-            {
-                throw characte_buffer_overflow_exception();
-            }
-            
-            character_buffer_type& nxt_cb = cb_cache_->get_character_buffer(nxt_);
-            nxt_cb.insert_character(ch, cboffset - size_);
+            cur_cb = &cur_cb->get_character_buffer_for_insertion(&cboffset);
         }
-        else
+        
+        if (cboffset < cur_cb->size_)
         {
-            if (cboffset < size_)
-            {
-                memcpy((buf_ + cboffset + 1), (buf_ + cboffset),
-                       (size_ - cboffset) * sizeof(char_type));
-            }
-    
-            buf_[cboffset] = ch;
-            ++size_;
+            memcpy((cur_cb->buf_ + cboffset + 1),
+                   (cur_cb->buf_ + cboffset),
+                   (cur_cb->size_ - cboffset) * sizeof(char_type));
         }
+    
+        cur_cb->buf_[cboffset] = ch;
+        ++cur_cb->size_;
         
         return op_done;
     }
     
+    // todo : implement an intern defragment policy.
+    // todo : retunr the operation done correctly.
     operation_done erase_character(cboffset_t cboffset)
     {
-        auto& cb = get_character_buffer(&cboffset);
         operation_done op_done;
+        character_buffer_type& cur_cb = get_character_buffer(&cboffset);
         
-        if (cboffset + 1 < cb.size_)
+        if (cboffset + 1 < cur_cb.size_)
         {
-            memcpy((cb.buf_ + cboffset),
-                   (cb.buf_ + cboffset + 1),
-                   (cb.size_ - cboffset - 1) * sizeof(char_type));
+            memcpy((cur_cb.buf_ + cboffset),
+                   (cur_cb.buf_ + cboffset + 1),
+                   (cur_cb.size_ - cboffset - 1) * sizeof(char_type));
         }
         
-        --cb.size_;
+        --cur_cb.size_;
     
         op_done.op_type = operation_type::CHARACTER_SUPPRESSION;
         op_done.op_offset = cboffset;
@@ -264,6 +276,11 @@ public:
         return cbid_;
     }
     
+    cbid_t get_prev() const
+    {
+        return prev_;
+    }
+    
     cbid_t get_nxt() const
     {
         return nxt_;
@@ -272,28 +289,6 @@ public:
     cboffset_t get_size() const
     {
         return size_;
-    }
-    
-    void link_character_buffer_after_current(cbid_t cbid)
-    {
-        character_buffer_type& cb_to_link = cb_cache_->get_character_buffer(cbid);
-        
-        if (nxt_ != EMPTY)
-        {
-            character_buffer_type& nxt_cb = cb_cache_->get_character_buffer(nxt_);
-            nxt_cb.prev_ = cb_to_link.cbid_;
-        }
-        nxt_ = cb_to_link.cbid_;
-    }
-    
-    void move_characters_to(cbid_t cbid)
-    {
-        character_buffer_type& cb_dest = cb_cache_->get_character_buffer(cbid);
-        constexpr cboffset_t half_size = CHARACTER_BUFFER_SIZE / 2;
-        
-        memcpy(cb_dest.buf_, buf_ + half_size, half_size * sizeof(char_type));
-        size_ -= half_size;
-        cb_dest.size_ = half_size;
     }
 
 private:
@@ -331,6 +326,27 @@ private:
         }
         
         return *cur_cb;
+    }
+    
+    void link_character_buffer_after_current(character_buffer_type& cb_to_link)
+    {
+        if (nxt_ != EMPTY)
+        {
+            character_buffer_type& nxt_cb = cb_cache_->get_character_buffer(nxt_);
+            nxt_cb.prev_ = cb_to_link.cbid_;
+        }
+        
+        nxt_ = cb_to_link.cbid_;
+        cb_to_link.prev_ = cbid_;
+    }
+    
+    void move_characters_to(character_buffer_type& cb_dest)
+    {
+        constexpr cboffset_t half_size = CHARACTER_BUFFER_SIZE / 2;
+        
+        memcpy(cb_dest.buf_, buf_ + half_size, half_size * sizeof(char_type));
+        size_ -= half_size;
+        cb_dest.size_ = half_size;
     }
 
 private:

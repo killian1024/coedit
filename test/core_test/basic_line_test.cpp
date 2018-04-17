@@ -18,9 +18,9 @@ TEST(basic_line, constructor_with_parameters)
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
     chatacter_buffer_cache cb_cache(0);
-    line_cache l_cache(&cb_cache, 0);
+    line_cache lne_cache(&cb_cache, 0);
     
-    auto it_lne = l_cache.insert_first_line();
+    auto it_lne = lne_cache.insert_first_line();
 }
 
 
@@ -32,19 +32,24 @@ TEST(basic_line, insert_character)
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
     chatacter_buffer_cache cb_cache(0);
-    line_cache l_cache(&cb_cache, 0);
+    line_cache lne_cache(&cb_cache, 0);
     cc::loffset_t loffset = 0;
     line::char_type ch = 65;
     line::char_type orig_ch = ch;
     
-    auto it_lne1 = l_cache.insert_first_line();
+    auto it_lne1 = lne_cache.insert_first_line();
     it_lne1->insert_character(ch++, loffset++);
     it_lne1->insert_character(ch++, loffset++);
     it_lne1->insert_character(ch++, loffset++);
     it_lne1->insert_character(ch++, loffset++);
     
+    ASSERT_TRUE((*it_lne1)[0] == orig_ch + 0);
+    ASSERT_TRUE((*it_lne1)[1] == orig_ch + 1);
+    ASSERT_TRUE((*it_lne1)[2] == orig_ch + 2);
+    ASSERT_TRUE((*it_lne1)[3] == orig_ch + 3);
+    
+    auto it_lne2 = lne_cache.insert_line_after(it_lne1->get_lid(), loffset, cc::newline_format::UNIX);
     loffset = 0;
-    auto it_lne2 = l_cache.insert_line_after(it_lne1->get_lid(), loffset, cc::newline_format::UNIX);
     it_lne2->insert_character(ch++, loffset++);
     it_lne2->insert_character(ch++, loffset++);
     it_lne2->insert_character(ch++, loffset++);
@@ -54,5 +59,10 @@ TEST(basic_line, insert_character)
     ASSERT_TRUE((*it_lne1)[1] == orig_ch + 1);
     ASSERT_TRUE((*it_lne1)[2] == orig_ch + 2);
     ASSERT_TRUE((*it_lne1)[3] == orig_ch + 3);
+    
+    ASSERT_TRUE((*it_lne2)[0] == orig_ch + 4);
+    ASSERT_TRUE((*it_lne2)[1] == orig_ch + 5);
+    ASSERT_TRUE((*it_lne2)[2] == orig_ch + 6);
+    ASSERT_TRUE((*it_lne2)[3] == orig_ch + 7);
 }
 

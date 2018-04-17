@@ -199,7 +199,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , l_cache_(nullptr)
+            , lne_cache_(nullptr)
             , cb_cache_(nullptr)
     {
     }
@@ -207,7 +207,7 @@ public:
     basic_line(
             lid_t lid,
             character_buffer_cache_type* cb_cache,
-            line_cache_type* l_cache
+            line_cache_type* lne_cache
     )
             : lid_(lid)
             , prev_(EMPTY)
@@ -216,51 +216,41 @@ public:
             , cboffset_(0)
             , n_chars_(0)
             , cb_cache_(cb_cache)
-            , l_cache_(l_cache)
+            , lne_cache_(lne_cache)
     {
         auto it_cb = cb_cache->insert_first_character_buffer();
         cbid_ = it_cb->get_cbid();
     }
     
-    // HERE : construir basandose en previous, nxt ya ne se pasa como parámetro.
     basic_line(
             lid_t lid,
             lid_t prev,
-            lid_t nxt,
             character_buffer_cache_type* cb_cache,
-            line_cache_type* l_cache
+            line_cache_type* lne_cache
     )
             : lid_(lid)
             , prev_(prev)
-            , nxt_(nxt)
+            , nxt_(EMPTY)
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
             , cb_cache_(cb_cache)
-            , l_cache_(l_cache)
+            , lne_cache_(lne_cache)
     {
-        if (prev_ == EMPTY)
+        line_type& prev_lne = lne_cache_->get_line(prev_);
+        character_buffer_type& prev_cb = cb_cache_->get_character_buffer(prev_lne.cbid_);
+    
+        prev_lne.link_line_after_current(*this);
+        cbid_ = prev_cb.get_cbid();
+        cboffset_ = prev_lne.cboffset_ + prev_lne.n_chars_;
+        
+        if (nxt_ == EMPTY && prev_cb.get_size() - 1 < cboffset_)
         {
-            auto it_cb = cb_cache->insert_first_character_buffer();
-            cbid_ = it_cb->get_cbid();
+            n_chars_ = 0;
         }
         else
         {
-            line_type& prev_lne = l_cache_->get_line(prev_);
-            character_buffer_type& prev_cb =
-                    cb_cache_->get_character_buffer(prev_lne.cbid_);
-            
-            cbid_ = prev_cb.get_cbid();
-            cboffset_ = prev_lne.cboffset_ + prev_lne.n_chars_;
-            
-            if (nxt_ == EMPTY && prev_cb.get_size() - 1 < cboffset_)
-            {
-                n_chars_ = 0;
-            }
-            else
-            {
-                n_chars_ = prev_cb.get_line_length(cboffset_);
-            }
+            n_chars_ = prev_cb.get_line_length(cboffset_);
         }
     }
     
@@ -270,7 +260,7 @@ public:
             line_cache_type* l_cache
     )
             : cb_cache_(cb_cache)
-            , l_cache_(l_cache)
+            , lne_cache_(l_cache)
     {
         std::ifstream ifs;
         
@@ -287,6 +277,7 @@ public:
         ifs.close();
     }
     
+    // todo : reimplement this method.
     inline iterator begin() noexcept
     {
         character_buffer_type& current_cb =
@@ -316,18 +307,28 @@ public:
         return iterator({EMPTY, 0}, cb_cache_);
     }
     
-    void insert_character(char_type ch, loffset_t loffset) // todo : get the return of the buffer insertion
+    // todo : get the return of the buffer insertion
+    void insert_character(char_type ch, loffset_t loffset)
     {
         character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         lid_t current_nxt_lid = nxt_;
         line_type* nxt_lne;
     
-        current_cb.insert_character(ch, cboffset_ + loffset);
-        ++n_chars_;
+        auto op_done = current_cb.insert_character(ch, cboffset_ + loffset);
+        
+        if (ch == LF || ch == CR)
+        {
+            n_chars_ = loffset + 1;
+        }
+        else
+        {
+            ++n_chars_;
+        }
     
+        // HERE calculate the side effects of the insertion.
         while (current_nxt_lid != EMPTY)
         {
-            nxt_lne = &(l_cache_->get_line(current_nxt_lid));
+            nxt_lne = &(lne_cache_->get_line(current_nxt_lid));
             if (nxt_lne->cbid_ != cbid_)
             {
                 break;
@@ -349,7 +350,7 @@ public:
     
         while (current_nxt_lid != EMPTY)
         {
-            nxt_lne = &(l_cache_->get_line(current_nxt_lid));
+            nxt_lne = &(lne_cache_->get_line(current_nxt_lid));
             if (nxt_lne->cbid_ != cbid_)
             {
                 break;
@@ -367,7 +368,7 @@ public:
             throw invalid_operation_exception();
         }
     
-        line_type* nxt_lne = &(l_cache_->get_line(nxt_));
+        line_type* nxt_lne = &(lne_cache_->get_line(nxt_));
         character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
         
         // Erase the endline characters.
@@ -382,7 +383,7 @@ public:
         n_chars_ += nxt_lne->n_chars_;
         if (nxt_ != EMPTY)
         {
-            nxt_lne = &(l_cache_->get_line(nxt_));
+            nxt_lne = &(lne_cache_->get_line(nxt_));
             nxt_lne->prev_ = lid_;
         }
     }
@@ -406,8 +407,6 @@ public:
         
         if (n_chars_ > 0)
         {
-            auto val = current_cb[cboffset_ + n_chars_ - 1];
-            
             if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
             {
                 return n_chars_ - 2;
@@ -455,24 +454,22 @@ public:
         return prev_;
     }
     
-    void set_prev(lid_t prev)
-    {
-        prev_ = prev;
-    }
-    
     lid_t get_nxt() const
     {
         return nxt_;
     }
-    
-    void set_nxt(lid_t nxt)
+
+private:
+    void link_line_after_current(line_type& lne_to_link)
     {
-        nxt_ = nxt;
-    }
-    
-    void set_n_chars(size_t n_chars)
-    {
-        n_chars_ = n_chars;
+        if (nxt_ != EMPTY)
+        {
+            line_type& nxt_lne = lne_cache_->get_line(nxt_);
+            nxt_lne.prev_ = lne_to_link.lid_;
+        }
+        
+        nxt_ = lne_to_link.lid_;
+        lne_to_link.prev_ = lid_;
     }
 
 private:
@@ -490,7 +487,7 @@ private:
     
     character_buffer_cache_type* cb_cache_;
     
-    line_cache_type* l_cache_;
+    line_cache_type* lne_cache_;
 };
 
 

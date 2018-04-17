@@ -59,18 +59,22 @@ public:
             CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
     >;
     
-    enum class operation_type
+    enum class operation_types : uint8_t
     {
-        CHARACTER_INSERTION,
-        CHARACTER_SUPPRESSION,
-        CHARACTER_BUFFER_ADDED,
-        CHARACTER_BUFFER_ERASED
+        NIL = 0x0,
+        CHARACTER_INSERTED = 0x1,
+        CHARACTER_ERASED = 0x2,
+        CHARACTER_MOVED = 0x4,
+        CHARACTER_BUFFER_INSERTED = 0x8,
+        CHARACTER_BUFFER_ERASED = 0x10,
+        ALL = 0x1F
     };
     
     struct operation_done
     {
-        operation_type op_type;
+        cbid_t op_cb;
         cboffset_t op_offset;
+        kcontain::flags<operation_types> op_types;
     };
     
     basic_character_buffer()
@@ -173,22 +177,27 @@ public:
         if (cur_cb->size_ == CHARACTER_BUFFER_SIZE)
         {
             cur_cb->cb_cache_->insert_character_buffer_after(cur_cb->cbid_);
+            op_done.op_types.set(operation_types::CHARACTER_BUFFER_INSERTED);
         }
         
         if (cboffset > cur_cb->size_)
         {
             cur_cb = &cur_cb->get_character_buffer_for_insertion(&cboffset);
         }
+        op_done.op_cb = cur_cb->get_cbid();
         
         if (cboffset < cur_cb->size_)
         {
             memcpy((cur_cb->buf_ + cboffset + 1),
                    (cur_cb->buf_ + cboffset),
                    (cur_cb->size_ - cboffset) * sizeof(char_type));
+            op_done.op_types.set(operation_types::CHARACTER_MOVED);
         }
     
         cur_cb->buf_[cboffset] = ch;
         ++cur_cb->size_;
+        op_done.op_types.set(operation_types::CHARACTER_INSERTED);
+        op_done.op_offset = cboffset;
         
         return op_done;
     }
@@ -209,7 +218,7 @@ public:
         
         --cur_cb.size_;
     
-        op_done.op_type = operation_type::CHARACTER_SUPPRESSION;
+        op_done.op_type = operation_types::CHARACTER_ERASED;
         op_done.op_offset = cboffset;
         
         return op_done;

@@ -71,7 +71,7 @@ public:
     
     basic_line_cache(character_buffer_cache_type* cb_cache, eid_t eid)
             : cb_cache_(cb_cache)
-            , l_cache_()
+            , lne_cache_()
             , lidb_cache_(eid, "lidb")
             , eid_(eid)
             , swap_usd_(false)
@@ -104,58 +104,58 @@ public:
     
     inline iterator begin() noexcept
     {
-        return l_cache_.begin();
+        return lne_cache_.begin();
     }
     
     inline const_iterator cbegin() const noexcept
     {
-        return l_cache_.cbegin();
+        return lne_cache_.cbegin();
     }
     
     inline iterator end() noexcept
     {
-        return l_cache_.end();
+        return lne_cache_.end();
     }
     
     inline const_iterator cend() const noexcept
     {
-        return l_cache_.cend();
+        return lne_cache_.cend();
     }
     
     void lock(const_iterator& it) noexcept
     {
-        l_cache_.lock(it);
+        lne_cache_.lock(it);
     }
     
     void lock(cbid_t cbid) noexcept
     {
-        l_cache_.lock(cbid);
+        lne_cache_.lock(cbid);
     }
     
     void unlock(const_iterator& it) noexcept
     {
-        l_cache_.unlock(it);
+        lne_cache_.unlock(it);
     }
     
     void unlock(cbid_t cbid) noexcept
     {
-        l_cache_.unlock(cbid);
+        lne_cache_.unlock(cbid);
     }
     
     iterator find(lid_t lid)
     {
         if (lid == EMPTY)
         {
-            return l_cache_.end();
+            return lne_cache_.end();
         }
         
-        iterator it = l_cache_.find(lid);
+        iterator it = lne_cache_.find(lid);
         
         if (it.end() && swap_usd_)
         {
             if (try_load_line(lid))
             {
-                it = l_cache_.find(lid);
+                it = lne_cache_.find(lid);
             }
         }
         
@@ -178,8 +178,7 @@ public:
     {
         lid_t new_lid = get_new_lid();
         
-        return insert_line_in_cache(new_lid, line_type(
-                new_lid, EMPTY, EMPTY, cb_cache_, this));
+        return insert_line_in_cache(new_lid, line_type(new_lid, cb_cache_, this));
     }
     
     iterator insert_line_after(lid_t lid, loffset_t loffset, newline_format newl_format)
@@ -204,20 +203,9 @@ public:
                 current_lne.insert_character(LF, loffset);
                 break;
         }
-    
-        current_lne.set_n_chars(loffset + 1);
-    
-        it_newline = insert_line_in_cache(new_lid, line_type(
-                new_lid, lid, current_lne.get_nxt(), cb_cache_, this));
-    
-        if (current_lne.get_nxt() != EMPTY)
-        {
-            line_type& nxt_lne = get_line(current_lne.get_nxt());
-            nxt_lne.set_prev(new_lid);
-        }
-    
-        current_lne.set_nxt(new_lid);
-    
+        
+        it_newline = insert_line_in_cache(new_lid, line_type(new_lid, lid, cb_cache_, this));
+        
         return it_newline;
     }
     
@@ -286,14 +274,14 @@ private:
             throw invalid_lid_exception();
         }
         
-        if (!l_cache_.is_least_recently_used_free())
+        if (!lne_cache_.is_least_recently_used_free())
         {
-            store_line(l_cache_.get_least_recently_used());
+            store_line(lne_cache_.get_least_recently_used());
         }
         
         lidb_cache_.set(lid);
         
-        return l_cache_.insert(lid, std::forward<TpValue_>(val));
+        return lne_cache_.insert(lid, std::forward<TpValue_>(val));
     }
     
     stdfs::path get_line_base_path()
@@ -348,7 +336,7 @@ private:
 private:
     character_buffer_cache_type* cb_cache_;
     
-    line_cache_type l_cache_;
+    line_cache_type lne_cache_;
     
     line_id_buffer_cache_type lidb_cache_;
     

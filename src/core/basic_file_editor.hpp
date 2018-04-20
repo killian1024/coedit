@@ -47,7 +47,8 @@ public:
             CHARACTER_BUFFER_SIZE,
             CHARACTER_BUFFER_CACHE_SIZE,
             CHARACTER_BUFFER_ID_BUFFER_SIZE,
-            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
     >;
     
     using line_type = basic_line<

@@ -5,18 +5,38 @@
 #ifndef COEDIT_CORE_BASIC_LINE_CACHE_HPP
 #define COEDIT_CORE_BASIC_LINE_CACHE_HPP
 
+#include <experimental/filesystem>
 #include <memory>
+#include <regex>
 
 #include <kboost/kboost.hpp>
 
 #include "basic_character_buffer_cache.hpp"
 #include "basic_line.hpp"
+#include "basic_id_buffer_cache.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
 
 
 namespace coedit {
 namespace core {
+
+
+namespace stdfs = std::experimental::filesystem;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
+>
+class basic_line;
 
 
 template<
@@ -43,7 +63,8 @@ public:
             CHARACTER_BUFFER_SIZE,
             CHARACTER_BUFFER_CACHE_SIZE,
             CHARACTER_BUFFER_ID_BUFFER_SIZE,
-            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
     >;
     
     using line_type = basic_line<
@@ -100,6 +121,34 @@ public:
                 }
             }
         }
+    }
+    
+    basic_line_cache& operator =(const basic_line_cache& rhs)
+    {
+        if (this != &rhs)
+        {
+            cb_cache_ = rhs.cb_cache_;
+            lidb_cache_ = rhs.lidb_cache_;
+            eid_ = rhs.eid_;
+            swap_usd_ = rhs.swap_usd_;
+            old_lid_ = rhs.old_lid_;
+        }
+    
+        return *this;
+    }
+    
+    basic_line_cache& operator =(basic_line_cache&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            std::swap(cb_cache_, rhs.cb_cache_);
+            lidb_cache_ = std::move(rhs.lidb_cache_);
+            std::swap(eid_, rhs.eid_);
+            std::swap(swap_usd_, rhs.swap_usd_);
+            std::swap(old_lid_, rhs.old_lid_);
+        }
+    
+        return *this;
     }
     
     inline iterator begin() noexcept
@@ -286,28 +335,28 @@ private:
     
     stdfs::path get_line_base_path()
     {
-        stdfs::path l_path = ".";
+        stdfs::path lne_path = ".";
         
-        l_path.append("coedit-");
-        l_path.concat(std::to_string(ksys::get_pid()));
-        l_path.concat("-");
-        l_path.concat(std::to_string(eid_));
-        l_path.concat("-l-");
+        lne_path.append("coedit-");
+        lne_path.concat(std::to_string(ksys::get_pid()));
+        lne_path.concat("-");
+        lne_path.concat(std::to_string(eid_));
+        lne_path.concat("-l-");
         
-        return l_path;
+        return lne_path;
     }
     
     stdfs::path get_line_path(lid_t lid)
     {
-        stdfs::path l_path = get_line_base_path();
-        l_path.concat(std::to_string(lid));
+        stdfs::path lne_path = get_line_base_path();
+        lne_path.concat(std::to_string(lid));
         
-        return l_path;
+        return lne_path;
     }
     
-    void store_line(line_type& l)
+    void store_line(line_type& lne)
     {
-        l.store(get_line_path(l.get_lid()));
+        lne.store(get_line_path(lne.get_lid()));
         swap_usd_ = true;
     }
     

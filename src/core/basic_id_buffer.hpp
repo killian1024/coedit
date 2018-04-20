@@ -26,11 +26,7 @@ template<
 class basic_id_buffer
 {
 public:
-    basic_id_buffer()
-            : buf_()
-            , idbid_()
-    {
-    }
+    basic_id_buffer() = default;
     
     basic_id_buffer(idbid_t idbid)
             : buf_()

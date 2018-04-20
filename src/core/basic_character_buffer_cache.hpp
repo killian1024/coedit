@@ -29,19 +29,35 @@ template<
         std::size_t CHARACTER_BUFFER_SIZE,
         std::size_t CHARACTER_BUFFER_CACHE_SIZE,
         std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
-        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
+>
+class basic_character_buffer;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
 >
 class basic_character_buffer_cache
 {
 public:
     using char_type = TpChar;
     
+    template<typename T>
+    using allocator_type = typename TpAllocator::template rebind<T>::other;
+    
     using character_buffer_type = basic_character_buffer<
             TpChar,
             CHARACTER_BUFFER_SIZE,
             CHARACTER_BUFFER_CACHE_SIZE,
             CHARACTER_BUFFER_ID_BUFFER_SIZE,
-            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
     >;
     
     using character_buffer_cache_type = kcontain::static_cache<
@@ -89,6 +105,30 @@ public:
                 }
             }
         }
+    }
+    
+    basic_character_buffer_cache& operator =(const basic_character_buffer_cache& rhs)
+    {
+        if (this != &rhs)
+        {
+            eid_ = rhs.eid_;
+            swap_usd_ = rhs.swap_usd_;
+            old_cbid_ = rhs.old_cbid_;
+        }
+    
+        return *this;
+    }
+    
+    basic_character_buffer_cache& operator =(basic_character_buffer_cache&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            std::swap(eid_, rhs.eid_);
+            std::swap(swap_usd_, rhs.swap_usd_);
+            std::swap(old_cbid_, rhs.old_cbid_);
+        }
+    
+        return *this;
     }
     
     inline iterator begin() noexcept
@@ -167,19 +207,16 @@ public:
     {
         cbid_t new_cbid = get_new_cbid();
         
-        return insert_character_buffer_in_cache(new_cbid, character_buffer_type(new_cbid, this));
+        return insert_character_buffer_in_cache(
+                new_cbid, character_buffer_type(new_cbid, this));
     }
     
-    iterator insert_character_buffer_after(cbid_t cbid)
+    iterator insert_character_buffer_after(cbid_t prev)
     {
         cbid_t new_cbid = get_new_cbid();
-        character_buffer_type& current_cb = get_character_buffer(cbid);
-        iterator it_new_cb;
         
-        it_new_cb = insert_character_buffer_in_cache(new_cbid, character_buffer_type(
-                new_cbid, cbid, this));
-        
-        return it_new_cb;
+        return insert_character_buffer_in_cache(
+                new_cbid, character_buffer_type(new_cbid, prev, this));
     }
     
     character_buffer_type& get_character_buffer(cbid_t cbid)

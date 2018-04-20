@@ -66,6 +66,15 @@ class characte_buffer_overflow_exception : public core_exception
 };
 
 
+class line_overflow_exception : public core_exception
+{
+    const char* what() const noexcept override
+    {
+        return "line overflow exception";
+    }
+};
+
+
 }
 }
 

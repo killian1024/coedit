@@ -77,6 +77,30 @@ public:
         }
     }
     
+    basic_id_buffer_cache& operator =(const basic_id_buffer_cache& rhs)
+    {
+        if (this != &rhs)
+        {
+            eid_ = rhs.eid_;
+            file_id_ = rhs.file_id_;
+            swap_usd_ = rhs.swap_usd_;
+        }
+        
+        return *this;
+    }
+    
+    basic_id_buffer_cache& operator =(basic_id_buffer_cache&& rhs) noexcept
+    {
+        if (this != &rhs)
+        {
+            std::swap(eid_, rhs.eid_);
+            file_id_ = std::move(rhs.file_id_);
+            std::swap(swap_usd_, rhs.swap_usd_);
+        }
+        
+        return *this;
+    }
+    
     inline iterator begin() noexcept
     {
         return cche_.begin();

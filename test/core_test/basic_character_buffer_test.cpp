@@ -5,15 +5,16 @@
 #include <gtest/gtest.h>
 #include <kboost/kboost.hpp>
 
-#include "core/basic_file_editor.hpp"
+#include "core/basic_character_buffer.hpp"
 
 namespace cc = coedit::core;
 
 
 TEST(basic_characters_buffer, insert_character)
 {
-    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8,
+                                                                    std::allocator<int>>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     
     chatacter_buffer_cache cb_cache(0);
     cc::cboffset_t cboffst = 0;
@@ -42,8 +43,9 @@ TEST(basic_characters_buffer, insert_character)
 
 TEST(basic_characters_buffer, erase_character)
 {
-    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8,
+                                                                    std::allocator<int>>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     
     chatacter_buffer_cache cb_cache(0);
     cc::cboffset_t cboffst = 0;
@@ -75,8 +77,9 @@ TEST(basic_characters_buffer, erase_character)
 
 TEST(basic_characters_buffer, get_line_length)
 {
-    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8,
+                                                                    std::allocator<int>>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     
     chatacter_buffer_cache cb_cache(0);
     cc::cboffset_t cboffst = 0;
@@ -106,8 +109,9 @@ TEST(basic_characters_buffer, get_line_length)
 
 TEST(basic_characters_buffer, operator_subscript)
 {
-    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8>;
-    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8>;
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8,
+                                                                    std::allocator<int>>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     
     cc::cboffset_t cboffst;
     chatacter_buffer::char_type ch;

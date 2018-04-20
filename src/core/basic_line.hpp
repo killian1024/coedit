@@ -11,12 +11,16 @@
 
 #include "basic_character_buffer_cache.hpp"
 #include "basic_line_cache.hpp"
+#include "core_exception.hpp"
 #include "fundamental_types.hpp"
 #include "newline_format.hpp"
 
 
 namespace coedit {
 namespace core {
+
+
+namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -57,7 +61,8 @@ public:
             CHARACTER_BUFFER_SIZE,
             CHARACTER_BUFFER_CACHE_SIZE,
             CHARACTER_BUFFER_ID_BUFFER_SIZE,
-            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
     >;
     
     using character_buffer_cache_type = basic_character_buffer_cache<
@@ -65,7 +70,8 @@ public:
             CHARACTER_BUFFER_SIZE,
             CHARACTER_BUFFER_CACHE_SIZE,
             CHARACTER_BUFFER_ID_BUFFER_SIZE,
-            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
     >;
     
     using line_type = basic_line<
@@ -92,6 +98,7 @@ public:
             TpAllocator
     >;
     
+    // todo : reimplement this method.
     class iterator : public kcontain::i_mutable_iterator<char_type, iterator>
     {
     public:
@@ -239,18 +246,21 @@ public:
     {
         line_type& prev_lne = lne_cache_->get_line(prev_);
         character_buffer_type& prev_cb = cb_cache_->get_character_buffer(prev_lne.cbid_);
-    
-        prev_lne.link_line_after_current(*this);
-        cbid_ = prev_cb.get_cbid();
-        cboffset_ = prev_lne.cboffset_ + prev_lne.n_chars_;
+        cboffset_t cur_cboffset = prev_lne.cboffset_ + prev_lne.n_chars_;
+        character_buffer_type& cur_cb = prev_cb.get_character_buffer_for_insertion(&cur_cboffset);
         
-        if (nxt_ == EMPTY && prev_cb.get_size() - 1 < cboffset_)
+        prev_lne.link_line_to(*this);
+        
+        cbid_ = cur_cb.get_cbid();
+        cboffset_ = cur_cboffset;
+        
+        if (nxt_ == EMPTY && cur_cb.get_size() - 1 < cboffset_)
         {
             n_chars_ = 0;
         }
         else
         {
-            n_chars_ = prev_cb.get_line_length(cboffset_);
+            n_chars_ = cur_cb.get_line_length(cboffset_);
         }
     }
     
@@ -302,19 +312,22 @@ public:
         return iterator({cbid_, cboffset_}, cb_cache_);
     }
     
+    // todo : reimplement this method.
     inline iterator end() noexcept
     {
         return iterator({EMPTY, 0}, cb_cache_);
     }
     
-    // todo : get the return of the buffer insertion
     void insert_character(char_type ch, loffset_t loffset)
     {
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
-        lid_t current_nxt_lid = nxt_;
-        line_type* nxt_lne;
-    
-        auto op_done = current_cb.insert_character(ch, cboffset_ + loffset);
+        if (loffset > n_chars_)
+        {
+            throw line_overflow_exception();
+        }
+        
+        character_buffer_type* cur_cb = &cb_cache_->get_character_buffer(cbid_);
+        auto op_done = cur_cb->insert_character(ch, cboffset_ + loffset);
+        basic_line* cur_lne;
         
         if (ch == LF || ch == CR)
         {
@@ -324,21 +337,41 @@ public:
         {
             ++n_chars_;
         }
-    
-        // HERE calculate the side effects of the insertion.
-        while (current_nxt_lid != EMPTY)
-        {
-            nxt_lne = &(lne_cache_->get_line(current_nxt_lid));
-            if (nxt_lne->cbid_ != cbid_)
-            {
-                break;
-            }
         
-            nxt_lne->cboffset_ += 1;
-            current_nxt_lid = nxt_lne->nxt_;
+        if (op_done.types.is_set(character_buffer_type::operation_types::CHARACTER_BUFFER_INSERTED))
+        {
+            for (cur_lne = &get_first_line_in_character_buffer(*this);
+                 cur_lne->cbid_ == cur_cb->get_cbid();
+                 cur_lne = &lne_cache_->get_line(cur_lne->nxt_))
+            {
+                if (cur_lne->cboffset_ > cur_cb->get_size())
+                {
+                    cur_lne->cbid_ = cur_cb->get_nxt();
+                    cur_lne->cboffset_ -= cur_cb->get_size();
+                }
+                
+                if (cur_lne->nxt_ == EMPTY)
+                {
+                    break;
+                }
+            }
+        }
+        else
+        {
+            for (cur_lne = this; cur_lne->nxt_ != EMPTY; )
+            {
+                cur_lne = &lne_cache_->get_line(cur_lne->nxt_);
+                if (cur_lne->cbid_ != op_done.cbid)
+                {
+                    break;
+                }
+
+                cur_lne->cboffset_ += 1;
+            }
         }
     }
     
+    // todo : reimplement this method.
     void erase_character(loffset_t loffset)
     {
         character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
@@ -356,7 +389,7 @@ public:
                 break;
             }
             
-            nxt_lne->cboffset_ += ~(lid_t)0;
+            nxt_lne->cboffset_ -= 1;
             current_nxt_lid = nxt_lne->nxt_;
         }
     }
@@ -369,10 +402,11 @@ public:
         }
     
         line_type* nxt_lne = &(lne_cache_->get_line(nxt_));
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
+        character_buffer_type& nxt_lne_cb = cb_cache_->get_character_buffer(nxt_lne->cbid_);
+        character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         
         // Erase the endline characters.
-        if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
+        if (n_chars_ - 1 > 0 && cur_cb[cboffset_ + n_chars_ - 2] == CR)
         {
             erase_character(n_chars_ - 1);
         }
@@ -458,9 +492,34 @@ public:
     {
         return nxt_;
     }
+    
+    cbid_t get_cbid() const
+    {
+        return cbid_;
+    }
+    
+    void set_cbid(cbid_t cbid)
+    {
+        cbid_ = cbid;
+    }
+    
+    cboffset_t get_cboffset() const
+    {
+        return cboffset_;
+    }
+    
+    void set_cboffset(cboffset_t cboffset)
+    {
+        cboffset_ = cboffset;
+    }
+    
+    size_t get_n_chars() const
+    {
+        return n_chars_;
+    }
 
 private:
-    void link_line_after_current(line_type& lne_to_link)
+    void link_line_to(line_type& lne_to_link)
     {
         if (nxt_ != EMPTY)
         {
@@ -470,6 +529,26 @@ private:
         
         nxt_ = lne_to_link.lid_;
         lne_to_link.prev_ = lid_;
+    }
+    
+    line_type& get_first_line_in_character_buffer(line_type& lne_ref)
+    {
+        line_type* cur_lne = &lne_ref;
+        line_type* prev_lne = cur_lne;
+        
+        while (prev_lne->cbid_ == lne_ref.cbid_)
+        {
+            cur_lne = prev_lne;
+            
+            if (cur_lne->prev_ == EMPTY)
+            {
+                break;
+            }
+            
+            prev_lne = &lne_cache_->get_line(cur_lne->prev_);
+        }
+        
+        return *cur_lne;
     }
 
 private:

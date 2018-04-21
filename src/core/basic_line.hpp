@@ -320,14 +320,27 @@ public:
     
     void insert_character(char_type ch, loffset_t loffset)
     {
+        using cbtot_t = typename character_buffer_type::operation_types;
+        
         if (loffset > n_chars_)
         {
             throw line_overflow_exception();
         }
+    
+        if (loffset > 0)
+        {
+            auto aux = (*this)[loffset - 1];
+            
+            if (aux == LF || (aux == CR && ch != LF))
+            {
+                throw line_overflow_exception();
+            }
+        }
         
         character_buffer_type* cur_cb = &cb_cache_->get_character_buffer(cbid_);
+        line_type* cur_lne;
+        
         auto op_done = cur_cb->insert_character(ch, cboffset_ + loffset);
-        basic_line* cur_lne;
         
         if (ch == LF || ch == CR)
         {
@@ -338,7 +351,7 @@ public:
             ++n_chars_;
         }
         
-        if (op_done.types.is_set(character_buffer_type::operation_types::CHARACTER_BUFFER_INSERTED))
+        if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_INSERTED))
         {
             for (cur_lne = &get_first_line_in_character_buffer(*this);
                  cur_lne->cbid_ == cur_cb->get_cbid();
@@ -374,23 +387,30 @@ public:
     // todo : reimplement this method.
     void erase_character(loffset_t loffset)
     {
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
-        lid_t current_nxt_lid = nxt_;
-        line_type* nxt_lne;
+        using cbtot_t = typename character_buffer_type::operation_types;
         
-        current_cb.erase_character(cboffset_ + loffset);
+        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
+        line_type* cur_lne;
+        
+        auto op_done = current_cb.erase_character(cboffset_ + loffset);
         --n_chars_;
     
-        while (current_nxt_lid != EMPTY)
+        if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_DEFRAGMENTED))
         {
-            nxt_lne = &(lne_cache_->get_line(current_nxt_lid));
-            if (nxt_lne->cbid_ != cbid_)
-            {
-                break;
-            }
             
-            nxt_lne->cboffset_ -= 1;
-            current_nxt_lid = nxt_lne->nxt_;
+        }
+        else
+        {
+            for (cur_lne = this; cur_lne->nxt_ != EMPTY; )
+            {
+                cur_lne = &(lne_cache_->get_line(cur_lne->nxt_));
+                if (cur_lne->cbid_ != op_done.cbid)
+                {
+                    break;
+                }
+        
+                cur_lne->cboffset_ -= 1;
+            }
         }
     }
     
@@ -402,7 +422,6 @@ public:
         }
     
         line_type* nxt_lne = &(lne_cache_->get_line(nxt_));
-        character_buffer_type& nxt_lne_cb = cb_cache_->get_character_buffer(nxt_lne->cbid_);
         character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         
         // Erase the endline characters.
@@ -498,19 +517,9 @@ public:
         return cbid_;
     }
     
-    void set_cbid(cbid_t cbid)
-    {
-        cbid_ = cbid;
-    }
-    
     cboffset_t get_cboffset() const
     {
         return cboffset_;
-    }
-    
-    void set_cboffset(cboffset_t cboffset)
-    {
-        cboffset_ = cboffset;
     }
     
     size_t get_n_chars() const

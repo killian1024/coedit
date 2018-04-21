@@ -71,9 +71,12 @@ public:
     {
         NIL = 0x0,
         CHARACTER_BUFFER_INSERTED = 0x1,
-        CHARACTER_BUFFER_MERGED_WITH_NEXT = 0x2,
-        CHARACTER_BUFFER_MERGED_WITH_PREVIOUS = 0x4,
-        ALL = 0x7
+        CHARACTER_BUFFER_DEFRAGMENTED = 0x2,
+        CHARACTER_BUFFER_MERGED_WITH_NEXT = 0x4,
+        CHARACTER_BUFFER_MERGED_WITH_PREVIOUS = 0x8,
+        CHARACTER_BUFFER_BALANCED_WITH_NEXT = 0x10,
+        CHARACTER_BUFFER_BALANCED_WITH_PREVIOS = 0x20,
+        ALL = 0x3F
     };
     
     struct operation_done
@@ -88,7 +91,7 @@ public:
             , cbid_(EMPTY)
             , prev_(EMPTY)
             , nxt_(EMPTY)
-            , size_(0)
+            , sze_(0)
             , cb_cache_(nullptr)
     {
     }
@@ -101,7 +104,7 @@ public:
             , cbid_(cbid)
             , prev_(EMPTY)
             , nxt_(EMPTY)
-            , size_(0)
+            , sze_(0)
             , cb_cache_(cb_cache)
     {
     }
@@ -115,7 +118,7 @@ public:
             , cbid_(cbid)
             , prev_(prev)
             , nxt_(EMPTY)
-            , size_(0)
+            , sze_(0)
             , cb_cache_(cb_cache)
     {
         character_buffer_type& prev_cb = cb_cache->get_character_buffer(prev_);
@@ -137,8 +140,8 @@ public:
         ifs.read((char*)&cbid_, sizeof(cbid_));
         ifs.read((char*)&prev_, sizeof(prev_));
         ifs.read((char*)&nxt_, sizeof(nxt_));
-        ifs.read((char*)&size_, sizeof(size_));
-        ifs.read((char*)buf_, sizeof(char_type) * size_);
+        ifs.read((char*)&sze_, sizeof(sze_));
+        ifs.read((char*)buf_, sizeof(char_type) * sze_);
     
         ifs.close();
     }
@@ -147,11 +150,11 @@ public:
     {
         if (this != &rhs)
         {
-            memcpy(buf_, rhs.buf_, rhs.size_ * sizeof(char_type));
+            memcpy(buf_, rhs.buf_, rhs.sze_ * sizeof(char_type));
             cbid_ = rhs.cbid_;
             prev_ = rhs.prev_;
             nxt_ = rhs.nxt_;
-            size_ = rhs.size_;
+            sze_ = rhs.sze_;
             cb_cache_ = rhs.cb_cache_;
         }
         
@@ -162,11 +165,11 @@ public:
     {
         if (this != &rhs)
         {
-            memcpy(buf_, rhs.buf_, rhs.size_ * sizeof(char_type));
+            memcpy(buf_, rhs.buf_, rhs.sze_ * sizeof(char_type));
             std::swap(cbid_, rhs.cbid_);
             std::swap(prev_, rhs.prev_);
             std::swap(nxt_, rhs.nxt_);
-            std::swap(size_, rhs.size_);
+            std::swap(sze_, rhs.sze_);
             std::swap(cb_cache_, rhs.cb_cache_);
         }
         
@@ -179,14 +182,14 @@ public:
         character_buffer_type* cur_cb = &get_character_buffer_for_insertion(&cboffset);
         
         // Fragmentation policy
-        if (cur_cb->size_ == CHARACTER_BUFFER_SIZE)
+        if (cur_cb->sze_ == CHARACTER_BUFFER_SIZE)
         {
             cb_cache_->insert_character_buffer_after(cur_cb->cbid_);
             op_done.types.set(operation_types::CHARACTER_BUFFER_INSERTED);
         }
         
         // Take the operands.
-        if (cboffset > cur_cb->size_)
+        if (cboffset > cur_cb->sze_)
         {
             cur_cb = &cur_cb->get_character_buffer_for_insertion(&cboffset);
         }
@@ -194,26 +197,23 @@ public:
         op_done.cboffset = cboffset;
         
         //Move the data for make the space for the new character.
-        if (cboffset < cur_cb->size_)
+        if (cboffset < cur_cb->sze_)
         {
             memcpy((cur_cb->buf_ + cboffset + 1),
                    (cur_cb->buf_ + cboffset),
-                   (cur_cb->size_ - cboffset) * sizeof(char_type));
+                   (cur_cb->sze_ - cboffset) * sizeof(char_type));
         }
     
         // Set the new character.
         cur_cb->buf_[cboffset] = ch;
-        ++cur_cb->size_;
+        ++cur_cb->sze_;
         
         return op_done;
     }
     
-    // todo : implement an intern defragment policy.
-    // todo : retunr the operation done correctly.
     operation_done erase_character(cboffset_t cboffset)
     {
         constexpr const cboffset_t _75percent = (CHARACTER_BUFFER_SIZE * 75) / 100;
-        constexpr const cboffset_t _50percent = (CHARACTER_BUFFER_SIZE * 50) / 100;
         constexpr const cboffset_t _25percent = (CHARACTER_BUFFER_SIZE * 25) / 100;
         
         operation_done op_done;
@@ -224,45 +224,59 @@ public:
         cboffset_t nxt_size = 0;
         
         // Erase the target character.
-        if (cboffset + 1 < cur_cb.size_)
+        if (cboffset + 1 < cur_cb.sze_)
         {
             memcpy((cur_cb.buf_ + cboffset),
                    (cur_cb.buf_ + cboffset + 1),
-                   (cur_cb.size_ - cboffset - 1) * sizeof(char_type));
+                   (cur_cb.sze_ - cboffset - 1) * sizeof(char_type));
         }
-        --cur_cb.size_;
+        op_done.cbid = cur_cb.get_cbid();
         op_done.cboffset = cboffset;
+        --cur_cb.sze_;
         
         // Defragmentation policy.
-        if (cur_cb.size_ < _75percent)
+        if (cur_cb.sze_ < _75percent)
         {
             if (cur_cb.nxt_ != EMPTY)
             {
                 nxt_cb = &cb_cache_->get_character_buffer(cur_cb.nxt_);
-                nxt_size = nxt_cb->size_;
+                nxt_size = nxt_cb->sze_;
             }
             if (cur_cb.prev_ != EMPTY)
             {
                 prev_cb = &cb_cache_->get_character_buffer(cur_cb.prev_);
-                prev_size = prev_cb->size_;
+                prev_size = prev_cb->sze_;
             }
     
             if (nxt_cb != nullptr &&
-                cur_cb.size_ + nxt_size <= _75percent)
+                cur_cb.sze_ + nxt_size <= _75percent)
             {
                 merge_with_next_character_buffer();
+                op_done.types.set(operation_types::CHARACTER_BUFFER_DEFRAGMENTED);
                 op_done.types.set(operation_types::CHARACTER_BUFFER_MERGED_WITH_NEXT);
             }
             else if (prev_cb != nullptr &&
-                     cur_cb.size_ + prev_size <= _75percent)
+                     cur_cb.sze_ + prev_size <= _75percent)
             {
                 merge_with_previous_character_buffer();
+                op_done.types.set(operation_types::CHARACTER_BUFFER_DEFRAGMENTED);
                 op_done.types.set(operation_types::CHARACTER_BUFFER_MERGED_WITH_PREVIOUS);
             }
-            else if (cur_cb.size_ <= _25percent)
+            else if (cur_cb.sze_ <= _25percent)
             {
-                // No buffer destruction.
-                // avarage_with(prev_size > nxt_size ? prev_cb : nxt_cb);
+                if (nxt_cb != nullptr &&
+                    nxt_size >= prev_size)
+                {
+                    balance_with_next_character_buffer();
+                    op_done.types.set(operation_types::CHARACTER_BUFFER_DEFRAGMENTED);
+                    op_done.types.set(operation_types::CHARACTER_BUFFER_BALANCED_WITH_NEXT);
+                }
+                else if (prev_cb != nullptr)
+                {
+                    balance_with_previous_character_buffer();
+                    op_done.types.set(operation_types::CHARACTER_BUFFER_DEFRAGMENTED);
+                    op_done.types.set(operation_types::CHARACTER_BUFFER_BALANCED_WITH_PREVIOS);
+                }
             }
         }
         
@@ -273,14 +287,14 @@ public:
     {
         character_buffer_type* cur_cb = this;
         
-        while (*cboffset >= cur_cb->size_)
+        while (*cboffset >= cur_cb->sze_)
         {
             if (cur_cb->nxt_ == EMPTY)
             {
                 throw characte_buffer_overflow_exception();
             }
             
-            *cboffset -= cur_cb->size_;
+            *cboffset -= cur_cb->sze_;
             cur_cb = &cb_cache_->get_character_buffer(cur_cb->nxt_);
         }
         
@@ -291,14 +305,14 @@ public:
     {
         character_buffer_type* cur_cb = this;
         
-        while (*cboffset > cur_cb->size_)
+        while (*cboffset > cur_cb->sze_)
         {
             if (cur_cb->nxt_ == EMPTY)
             {
                 throw characte_buffer_overflow_exception();
             }
             
-            *cboffset -= cur_cb->size_;
+            *cboffset -= cur_cb->sze_;
             cur_cb = &cb_cache_->get_character_buffer(cur_cb->nxt_);
         }
         
@@ -314,7 +328,7 @@ public:
         {
             cur_cb = &cur_cb->get_character_buffer(&cboffset);
             
-            while (cboffset < cur_cb->size_ &&
+            while (cboffset < cur_cb->sze_ &&
                    cur_cb->buf_[cboffset] != LF &&
                    cur_cb->buf_[cboffset] != CR)
             {
@@ -322,7 +336,7 @@ public:
                 ++cboffset;
             }
             
-            if (cboffset < cur_cb->size_)
+            if (cboffset < cur_cb->sze_)
             {
                 ++line_len;
                 if (cur_cb->buf_[cboffset] == CR &&
@@ -333,7 +347,7 @@ public:
                 }
             }
             
-        } while (cboffset == cur_cb->size_ && cur_cb->nxt_ != EMPTY);
+        } while (cboffset == cur_cb->sze_ && cur_cb->nxt_ != EMPTY);
     
         return line_len;
     }
@@ -348,17 +362,17 @@ public:
         ofs.write((const char*)&cbid_, sizeof(cbid_));
         ofs.write((const char*)&prev_, sizeof(prev_));
         ofs.write((const char*)&nxt_, sizeof(nxt_));
-        ofs.write((const char*)&size_, sizeof(size_));
-        ofs.write((const char*)buf_, sizeof(char_type) * size_);
+        ofs.write((const char*)&sze_, sizeof(sze_));
+        ofs.write((const char*)buf_, sizeof(char_type) * sze_);
         
         ofs.close();
     }
     
     char_type& operator [](cboffset_t i)
     {
-        auto& chars_buf = get_character_buffer(&i);
+        character_buffer_type& cb = get_character_buffer(&i);
         
-        return chars_buf.buf_[i];
+        return cb.buf_[i];
     }
     
     cbid_t get_cbid() const
@@ -378,7 +392,7 @@ public:
     
     cboffset_t get_size() const
     {
-        return size_;
+        return sze_;
     }
 
 private:
@@ -409,11 +423,11 @@ private:
     {
         constexpr const cboffset_t half_size = CHARACTER_BUFFER_SIZE / 2;
     
-        if (size_ == CHARACTER_BUFFER_SIZE)
+        if (sze_ == CHARACTER_BUFFER_SIZE)
         {
             memcpy(cb_dest.buf_, buf_ + half_size, half_size * sizeof(char_type));
-            size_ -= half_size;
-            cb_dest.size_ = half_size;
+            sze_ -= half_size;
+            cb_dest.sze_ = half_size;
             
             return true;
         }
@@ -430,12 +444,14 @@ private:
         
         character_buffer_type& nxt_cb = cb_cache_->get_character_buffer(nxt_);
         
-        if (klow::add(size_, nxt_cb.size_) > CHARACTER_BUFFER_SIZE)
+        if (klow::add(sze_, nxt_cb.sze_) > CHARACTER_BUFFER_SIZE)
         {
             return false;
         }
         
-        memcpy(buf_ + size_, nxt_cb.buf_, nxt_cb.size_ * sizeof(char_type));
+        memcpy(buf_ + sze_, nxt_cb.buf_, nxt_cb.sze_ * sizeof(char_type));
+        
+        sze_ += nxt_cb.sze_;
         
         if (nxt_cb.nxt_ != EMPTY)
         {
@@ -454,15 +470,15 @@ private:
     
         character_buffer_type& prev_cb = cb_cache_->get_character_buffer(prev_);
         
-        if (klow::add(size_, prev_cb.size_) > CHARACTER_BUFFER_SIZE)
+        if (klow::add(sze_, prev_cb.sze_) > CHARACTER_BUFFER_SIZE)
         {
             return false;
         }
     
-        memcpy(buf_ + prev_cb.size_, buf_, size_ * sizeof(char_type));
-        memcpy(buf_, prev_cb.buf_, prev_cb.size_ * sizeof(char_type));
+        memcpy(buf_ + prev_cb.sze_, buf_, sze_ * sizeof(char_type));
+        memcpy(buf_, prev_cb.buf_, prev_cb.sze_ * sizeof(char_type));
         
-        size_ += prev_cb.size_;
+        sze_ += prev_cb.sze_;
         
         if (prev_cb.prev_ != EMPTY)
         {
@@ -481,8 +497,36 @@ private:
         }
     
         character_buffer_type& nxt_cb = cb_cache_->get_character_buffer(nxt_);
+        size_t total_sze = klow::add(sze_, nxt_cb.sze_) / 2;
+        size_t nxt_diff = nxt_cb.sze_ - total_sze;
         
+        memcpy(buf_ + sze_, nxt_cb.buf_, nxt_diff * sizeof(char_type));
+        memcpy(nxt_cb.buf_, nxt_cb.buf_ + nxt_diff, total_sze * sizeof(char_type));
         
+        sze_ = total_sze;
+        nxt_cb.sze_ = total_sze;
+        
+        return true;
+    }
+    
+    bool balance_with_previous_character_buffer()
+    {
+        if (prev_ == EMPTY)
+        {
+            return false;
+        }
+        
+        character_buffer_type& prev_cb = cb_cache_->get_character_buffer(prev_);
+        size_t total_sze = klow::add(sze_, prev_cb.sze_) / 2;
+        size_t prev_diff = prev_cb.sze_ - total_sze;
+        
+        memcpy(buf_ + prev_diff, buf_, sze_ * sizeof(char_type));
+        memcpy(buf_, prev_cb.buf_ + total_sze, prev_diff * sizeof(char_type));
+        
+        sze_ = total_sze;
+        prev_cb.sze_ = total_sze;
+        
+        return true;
     }
 
 private:
@@ -494,7 +538,7 @@ private:
     
     cbid_t nxt_;
     
-    cboffset_t size_;
+    cboffset_t sze_;
     
     character_buffer_cache_type* cb_cache_;
 };

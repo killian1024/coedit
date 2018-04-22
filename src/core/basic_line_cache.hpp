@@ -287,6 +287,7 @@ public:
     }
 
 private:
+    // todo : Improve this method, the more lid are near better it will be.
     lid_t get_new_lid()
     {
         lid_t new_lid = old_lid_;

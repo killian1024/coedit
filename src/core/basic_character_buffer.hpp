@@ -5,6 +5,10 @@
 #ifndef COEDIT_CORE_BASIC_CHARACTER_BUFFER_HPP
 #define COEDIT_CORE_BASIC_CHARACTER_BUFFER_HPP
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+#include <cstdlib>
 #include <experimental/filesystem>
 #include <fstream>
 #include <memory>
@@ -87,7 +91,7 @@ public:
     };
     
     basic_character_buffer()
-            : buf_()
+            : buf_(nullptr)
             , cbid_(EMPTY)
             , prev_(EMPTY)
             , nxt_(EMPTY)
@@ -107,6 +111,7 @@ public:
             , sze_(0)
             , cb_cache_(cb_cache)
     {
+        allocate_memory();
     }
     
     basic_character_buffer(
@@ -121,6 +126,7 @@ public:
             , sze_(0)
             , cb_cache_(cb_cache)
     {
+        allocate_memory();
         character_buffer_type& prev_cb = cb_cache->get_character_buffer(prev_);
         prev_cb.link_character_buffer_to(*this);
         prev_cb.move_half_characters_to(*this);
@@ -128,12 +134,13 @@ public:
     
     basic_character_buffer(
             const stdfs::path& cb_path,
-            character_buffer_cache_type* chars_buf_cache
+            character_buffer_cache_type* cb_cache
     )
-            : cb_cache_(chars_buf_cache)
+            : cb_cache_(cb_cache)
     {
         std::ifstream ifs;
-    
+        
+        allocate_memory();
         ifs.exceptions(std::ofstream::failbit | std::ofstream::badbit);
         ifs.open(cb_path, std::ios::in | std::ios::binary);
     
@@ -144,6 +151,14 @@ public:
         ifs.read((char*)buf_, sizeof(char_type) * sze_);
     
         ifs.close();
+    }
+    
+    ~basic_character_buffer()
+    {
+        if (buf_ != nullptr)
+        {
+            free(buf_);
+        }
     }
     
     basic_character_buffer& operator =(const basic_character_buffer& rhs)
@@ -165,7 +180,13 @@ public:
     {
         if (this != &rhs)
         {
-            memcpy(buf_, rhs.buf_, rhs.sze_ * sizeof(char_type));
+            if (buf_ != nullptr)
+            {
+                free(buf_);
+                buf_ = nullptr;
+            }
+    
+            std::swap(buf_, rhs.buf_);
             std::swap(cbid_, rhs.cbid_);
             std::swap(prev_, rhs.prev_);
             std::swap(nxt_, rhs.nxt_);
@@ -380,12 +401,12 @@ public:
         return cbid_;
     }
     
-    cbid_t get_prev() const
+    cbid_t get_previous() const
     {
         return prev_;
     }
     
-    cbid_t get_nxt() const
+    cbid_t get_next() const
     {
         return nxt_;
     }
@@ -396,6 +417,23 @@ public:
     }
 
 private:
+    // todo : Implement an align allocator and give it to this class.
+    void allocate_memory()
+    {
+        std::size_t page_sze = CHARACTER_BUFFER_SIZE * sizeof(char_type);
+        
+        if (page_sze < sizeof(void*))
+        {
+            page_sze = sizeof(void*);
+        }
+        
+        if (posix_memalign((void**)&buf_, page_sze, page_sze) != 0)
+        {
+            perror("posix_memalign");
+            throw bad_allocation_exception();
+        }
+    }
+    
     void link_character_buffer_to(character_buffer_type& cb_to_link)
     {
         if (nxt_ != EMPTY)
@@ -450,13 +488,8 @@ private:
         }
         
         memcpy(buf_ + sze_, nxt_cb.buf_, nxt_cb.sze_ * sizeof(char_type));
-        
         sze_ += nxt_cb.sze_;
-        
-        if (nxt_cb.nxt_ != EMPTY)
-        {
-            unlink_character_buffer_to(nxt_cb);
-        }
+        unlink_character_buffer_to(nxt_cb);
         
         return true;
     }
@@ -530,7 +563,7 @@ private:
     }
 
 private:
-    char_type buf_[CHARACTER_BUFFER_SIZE];
+    char_type* buf_;
     
     cbid_t cbid_;
     

@@ -98,51 +98,35 @@ public:
             TpAllocator
     >;
     
-    // todo : reimplement this method.
+    // todo : Implement this class with a more efficient logic.
     class iterator : public kcontain::i_mutable_iterator<char_type, iterator>
     {
     public:
         using self_type = iterator;
         
         using value_type = char_type;
-        
-        using node_type = std::pair<cbid_t, cboffset_t>;
     
         iterator() noexcept
-                : cur_({EMPTY, 0})
-                , char_buf_cache_(nullptr)
+                : lne_(nullptr)
+                , cur_pos_(0)
         {
         }
     
-        iterator(
-                node_type cur,
-                character_buffer_cache_type* chars_buf_cache
-        ) noexcept
-                : cur_(std::move(cur))
-                , char_buf_cache_(chars_buf_cache)
+        iterator(line_type* lne, loffset_t cur_pos) noexcept
+                : lne_(lne)
+                , cur_pos_(cur_pos)
         {
         }
         
         self_type& operator ++() noexcept override
         {
-            character_buffer_type& current_cb =
-                    char_buf_cache_->get_character_buffer(cur_.first);
-            
-            if (cur_.second + 1 >= CHARACTER_BUFFER_SIZE ||
-                cur_.second + 1 >= current_cb.get_size())
+            if (cur_pos_ + 1 >= lne_->get_n_chars())
             {
-                cur_.second = 0;
-                cur_.first = current_cb.get_nxt();
+                lne_ = nullptr;
             }
             else
             {
-                ++cur_.second;
-            }
-    
-            if (current_cb[cur_.second] == LF || current_cb[cur_.second] == CR)
-            {
-                cur_.first = EMPTY;
-                cur_.second = 0;
+                ++cur_pos_;
             }
             
             return *this;
@@ -150,36 +134,39 @@ public:
         
         self_type& operator --() noexcept override
         {
-            // todo : implement the operator --
+            if (cur_pos_ == 0)
+            {
+                lne_ = nullptr;
+            }
+            else
+            {
+                --cur_pos_;
+            }
+            
             return *this;
         }
         
         bool operator ==(const self_type& rhs) const noexcept override
         {
-            return cur_ == rhs.cur_;
+            return lne_ == rhs.lne_ && cur_pos_ == rhs.cur_pos_;
         }
         
         bool end() const noexcept override
         {
-            return cur_.first == EMPTY && cur_.second == 0;
+            return lne_ == nullptr;
         }
         
         value_type& operator *() noexcept override
         {
-            character_buffer_type& current_cb =
-                    char_buf_cache_->get_character_buffer(cur_.first);
-            
-            return current_cb[cur_.second];
+            return (*lne_)[cur_pos_];
         }
         
         value_type* operator ->() noexcept override
         {
-            character_buffer_type& current_cb =
-                    char_buf_cache_->get_character_buffer(cur_.first);
-            
-            return &(current_cb[cur_.second]);
+            return &(*lne_)[cur_pos_];
         }
         
+        // todo : Why ?
         template<
                 typename TpChar__,
                 std::size_t CHARACTER_BUFFER_SIZE__,
@@ -194,9 +181,9 @@ public:
         friend class basic_file_editor;
     
     protected:
-        node_type cur_;
-    
-        character_buffer_cache_type* char_buf_cache_;
+        line_type* lne_;
+        
+        loffset_t cur_pos_;
     };
     
     basic_line()
@@ -353,13 +340,13 @@ public:
         
         if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_INSERTED))
         {
-            for (cur_lne = &get_first_line_in_character_buffer(*this);
+            for (cur_lne = get_first_line_in_character_buffer(*this);
                  cur_lne->cbid_ == cur_cb->get_cbid();
                  cur_lne = &lne_cache_->get_line(cur_lne->nxt_))
             {
                 if (cur_lne->cboffset_ > cur_cb->get_size())
                 {
-                    cur_lne->cbid_ = cur_cb->get_nxt();
+                    cur_lne->cbid_ = cur_cb->get_next();
                     cur_lne->cboffset_ -= cur_cb->get_size();
                 }
                 
@@ -384,26 +371,187 @@ public:
         }
     }
     
-    // todo : reimplement this method.
+    // todo : This method is the evil, but you can do it better, good luck.
     void erase_character(loffset_t loffset)
     {
         using cbtot_t = typename character_buffer_type::operation_types;
         
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
-        line_type* cur_lne;
+        if (loffset >= n_chars_)
+        {
+            throw line_overflow_exception();
+        }
         
-        auto op_done = current_cb.erase_character(cboffset_ + loffset);
+        character_buffer_type* cur_cb;
+        line_type* cur_lne;
+        cbid_t old_nxt_cbid;
+        cbid_t old_prev_cbid;
+        size_t old_cb_sze;
+        cbid_t old_nxt_nxt_cbid = EMPTY;
+        cbid_t old_prev_prev_cbid = EMPTY;
+        
+        cboffset_t real_cboffset = cboffset_ + loffset;
+        cur_cb = &cb_cache_->get_character_buffer(cbid_);
+        cur_cb = &cur_cb->get_character_buffer(&real_cboffset);
+        old_nxt_cbid = cur_cb->get_next();
+        old_prev_cbid = cur_cb->get_previous();
+        old_cb_sze = cur_cb->get_size();
+        
+        if (old_nxt_cbid != EMPTY)
+        {
+            old_nxt_nxt_cbid = cb_cache_->get_character_buffer(old_nxt_cbid).get_next();
+        }
+        if (old_prev_cbid != EMPTY)
+        {
+            old_prev_prev_cbid = cb_cache_->get_character_buffer(old_prev_cbid).get_previous();
+        }
+        
+        auto op_done = cur_cb->erase_character(real_cboffset);
+        character_buffer_type& op_cb = cb_cache_->get_character_buffer(op_done.cbid);
         --n_chars_;
     
         if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_DEFRAGMENTED))
         {
-            
+            if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_MERGED_WITH_NEXT))
+            {
+                for (cur_lne = this;
+                     cur_lne->cbid_ != old_nxt_nxt_cbid;
+                     cur_lne = &lne_cache_->get_line(cur_lne->nxt_))
+                {
+                    if (cur_lne->cbid_ == op_done.cbid)
+                    {
+                        if (cur_lne->cboffset_ > op_done.cboffset)
+                        {
+                            cur_lne->cboffset_ -= 1;
+                        }
+                    }
+                    
+                    if (cur_lne->cbid_ == old_nxt_cbid)
+                    {
+                        cur_lne->cbid_ = op_done.cbid;
+                        cur_lne->cboffset_ += old_cb_sze - 1;
+                    }
+                    
+                    if (cur_lne->nxt_ == EMPTY)
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_MERGED_WITH_PREVIOUS))
+            {
+                cboffset_t old_prev_cb_sze = cur_cb->get_size() - old_cb_sze;
+                cur_lne = get_first_line_in_character_buffer(*this);
+                
+                if (cur_lne->cbid_ == op_done.cbid)
+                {
+                    do
+                    {
+                        cur_lne = &lne_cache_->get_line(cur_lne->prev_);
+                        
+                    } while (cur_lne->prev_ != EMPTY && cur_lne->cbid_ == old_prev_cbid);
+                }
+    
+                for (;
+                     cur_lne->cbid_ != old_nxt_cbid;
+                     cur_lne = &lne_cache_->get_line(cur_lne->nxt_))
+                {
+                    if (cur_lne->cbid_ == op_done.cbid)
+                    {
+                        if (cur_lne->cboffset_ > op_done.cboffset)
+                        {
+                            cur_lne->cboffset_ -= 1;
+                        }
+                        
+                        cur_lne->cboffset_ += old_prev_cb_sze;
+                    }
+        
+                    if (cur_lne->cbid_ == old_prev_cbid)
+                    {
+                        cur_lne->cbid_ = op_done.cbid;
+                    }
+        
+                    if (cur_lne->nxt_ == EMPTY)
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_BALANCED_WITH_NEXT))
+            {
+                cboffset_t n_moved = cur_cb->get_size() - old_cb_sze;
+                
+                for (cur_lne = this;
+                     cur_lne->cbid_ != old_nxt_nxt_cbid;
+                     cur_lne = &lne_cache_->get_line(cur_lne->nxt_))
+                {
+                    if (cur_lne->cbid_ == op_done.cbid)
+                    {
+                        if (cur_lne->cboffset_ > op_done.cboffset)
+                        {
+                            cur_lne->cboffset_ -= 1;
+                        }
+                    }
+        
+                    if (cur_lne->cbid_ == old_nxt_cbid)
+                    {
+                        if (cur_lne->cboffset_ < n_moved)
+                        {
+                            cur_lne->cbid_ = op_done.cbid;
+                            cur_lne->cboffset_ += old_cb_sze - 1;
+                        }
+                        else
+                        {
+                            cur_lne->cboffset_ -= n_moved;
+                        }
+                    }
+        
+                    if (cur_lne->nxt_ == EMPTY)
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (op_done.types.is_set(cbtot_t::CHARACTER_BUFFER_BALANCED_WITH_PREVIOS))
+            {
+                cboffset_t n_moved = cur_cb->get_size() - old_cb_sze;
+                cboffset_t prev_cb_sze =
+                        cb_cache_->get_character_buffer(old_prev_cbid).get_size() - n_moved;
+                
+                for (cur_lne = this;
+                     cur_lne->cbid_ != old_nxt_cbid;
+                     cur_lne = &lne_cache_->get_line(cur_lne->nxt_))
+                {
+                    if (cur_lne->cbid_ == op_done.cbid)
+                    {
+                        if (cur_lne->cboffset_ > op_done.cboffset)
+                        {
+                            cur_lne->cboffset_ -= 1;
+                        }
+                        
+                        cur_lne->cboffset_ += n_moved;
+                    }
+        
+                    if (cur_lne->cbid_ == old_prev_cbid)
+                    {
+                        if (cur_lne->cboffset_ >= prev_cb_sze)
+                        {
+                            cur_lne->cbid_ = op_done.cbid;
+                            cur_lne->cboffset_ -= prev_cb_sze;
+                        }
+                    }
+        
+                    if (cur_lne->nxt_ == EMPTY)
+                    {
+                        break;
+                    }
+                }
+            }
         }
         else
         {
             for (cur_lne = this; cur_lne->nxt_ != EMPTY; )
             {
-                cur_lne = &(lne_cache_->get_line(cur_lne->nxt_));
+                cur_lne = &lne_cache_->get_line(cur_lne->nxt_);
                 if (cur_lne->cbid_ != op_done.cbid)
                 {
                     break;
@@ -441,30 +589,30 @@ public:
         }
     }
     
-    bool can_go_left(loffset_t loffset)
+    bool can_go_left(loffset_t cur_pos)
     {
-        return loffset > 0;
+        return cur_pos > 0;
     }
     
-    bool can_go_right(loffset_t loffset)
+    bool can_go_right(loffset_t cur_pos)
     {
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
-        auto val = current_cb[cboffset_ + loffset];
+        character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
+        char_type val = cur_cb[cboffset_ + cur_pos];
         
-        return val != LF && val != CR && (nxt_ != EMPTY || loffset < n_chars_);
+        return val != LF && val != CR && (nxt_ != EMPTY || cur_pos < n_chars_);
     }
     
     std::size_t get_line_length()
     {
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
+        character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         
         if (n_chars_ > 0)
         {
-            if (n_chars_ - 1 > 0 && current_cb[cboffset_ + n_chars_ - 2] == CR)
+            if (n_chars_ - 1 > 0 && cur_cb[cboffset_ + n_chars_ - 2] == CR)
             {
                 return n_chars_ - 2;
             }
-            else if (current_cb[cboffset_ + n_chars_ - 1] == LF)
+            else if (cur_cb[cboffset_ + n_chars_ - 1] == LF)
             {
                 return n_chars_ - 1;
             }
@@ -492,9 +640,14 @@ public:
     
     char_type& operator [](loffset_t i)
     {
-        character_buffer_type& current_cb = cb_cache_->get_character_buffer(cbid_);
+        if (i >= n_chars_)
+        {
+            throw line_overflow_exception();
+        }
         
-        return current_cb[cboffset_ + i];
+        character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
+        
+        return cur_cb[cboffset_ + i];
     }
     
     lid_t get_lid() const
@@ -502,12 +655,12 @@ public:
         return lid_;
     }
     
-    lid_t get_prev() const
+    lid_t get_previous() const
     {
         return prev_;
     }
     
-    lid_t get_nxt() const
+    lid_t get_next() const
     {
         return nxt_;
     }
@@ -540,7 +693,7 @@ private:
         lne_to_link.prev_ = lid_;
     }
     
-    line_type& get_first_line_in_character_buffer(line_type& lne_ref)
+    line_type* get_first_line_in_character_buffer(line_type& lne_ref)
     {
         line_type* cur_lne = &lne_ref;
         line_type* prev_lne = cur_lne;
@@ -557,7 +710,7 @@ private:
             prev_lne = &lne_cache_->get_line(cur_lne->prev_);
         }
         
-        return *cur_lne;
+        return cur_lne;
     }
 
 private:

@@ -248,6 +248,7 @@ public:
     }
     
 private:
+    // todo : Improve this method, the more cbid are near better it will be.
     cbid_t get_new_cbid()
     {
         cbid_t new_cbid = old_cbid_;

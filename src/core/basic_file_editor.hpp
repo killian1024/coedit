@@ -102,7 +102,7 @@ public:
         self_type& operator ++() noexcept override
         {
             line_type& current_lne = lnes_cache_->get_line(cur_);
-            cur_ = current_lne.get_nxt();
+            cur_ = current_lne.get_next();
             
             return *this;
         }
@@ -110,7 +110,7 @@ public:
         self_type& operator --() noexcept override
         {
             line_type& current_lne = lnes_cache_->get_line(cur_);
-            cur_ = current_lne.get_prev();
+            cur_ = current_lne.get_previous();
             
             return *this;
         }
@@ -279,7 +279,7 @@ private:
         
         auto it_lne = l_cache_.insert_line_after(current_lid_, cursor_pos_.loffset, newl_format_);
         
-        current_lid_ = it_lne->get_nxt();
+        current_lid_ = it_lne->get_next();
         cursor_pos_.loffset = 0;
         ++n_lnes_;
         ++cursor_pos_.coffset;
@@ -290,7 +290,7 @@ private:
     bool handle_backspace()
     {
         line_type& current_lne = l_cache_.get_line(current_lid_);
-        lid_t prev_lid = current_lne.get_prev();
+        lid_t prev_lid = current_lne.get_previous();
         
         if (cursor_pos_.loffset > 0)
         {
@@ -366,7 +366,7 @@ private:
     bool handle_go_up()
     {
         line_type& current_lne = l_cache_.get_line(current_lid_);
-        lid_t prev_lid = current_lne.get_prev();
+        lid_t prev_lid = current_lne.get_previous();
     
         if (prev_lid != EMPTY)
         {
@@ -387,7 +387,7 @@ private:
     bool handle_go_down()
     {
         line_type& current_lne = l_cache_.get_line(current_lid_);
-        lid_t nxt_lid = current_lne.get_nxt();
+        lid_t nxt_lid = current_lne.get_next();
     
         if (nxt_lid != EMPTY)
         {

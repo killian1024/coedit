@@ -75,6 +75,15 @@ class line_overflow_exception : public core_exception
 };
 
 
+class bad_allocation_exception : public core_exception
+{
+    const char* what() const noexcept override
+    {
+        return "bad allocation exception";
+    }
+};
+
+
 }
 }
 

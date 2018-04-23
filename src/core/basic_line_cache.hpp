@@ -288,6 +288,7 @@ public:
 
 private:
     // todo : Improve this method, the more lid are near better it will be.
+    // todo : D'onst use find(), use something that doesn't load anything.
     lid_t get_new_lid()
     {
         lid_t new_lid = old_lid_;

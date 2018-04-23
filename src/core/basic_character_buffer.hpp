@@ -153,11 +153,16 @@ public:
         ifs.close();
     }
     
+    basic_character_buffer(const basic_character_buffer& rhs) = delete;
+    
+    basic_character_buffer(basic_character_buffer&& rhs) = delete;
+    
     ~basic_character_buffer()
     {
         if (buf_ != nullptr)
         {
             free(buf_);
+            buf_ = nullptr;
         }
     }
     
@@ -165,6 +170,11 @@ public:
     {
         if (this != &rhs)
         {
+            if (buf_ == nullptr)
+            {
+                allocate_memory();
+            }
+            
             memcpy(buf_, rhs.buf_, rhs.sze_ * sizeof(char_type));
             cbid_ = rhs.cbid_;
             prev_ = rhs.prev_;
@@ -180,12 +190,6 @@ public:
     {
         if (this != &rhs)
         {
-            if (buf_ != nullptr)
-            {
-                free(buf_);
-                buf_ = nullptr;
-            }
-    
             std::swap(buf_, rhs.buf_);
             std::swap(cbid_, rhs.cbid_);
             std::swap(prev_, rhs.prev_);
@@ -429,7 +433,6 @@ private:
         
         if (posix_memalign((void**)&buf_, page_sze, page_sze) != 0)
         {
-            perror("posix_memalign");
             throw bad_allocation_exception();
         }
     }

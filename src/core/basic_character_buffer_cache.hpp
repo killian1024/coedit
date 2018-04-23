@@ -249,6 +249,7 @@ public:
     
 private:
     // todo : Improve this method, the more cbid are near better it will be.
+    // todo : D'onst use find(), use something that doesn't load anything.
     cbid_t get_new_cbid()
     {
         cbid_t new_cbid = old_cbid_;

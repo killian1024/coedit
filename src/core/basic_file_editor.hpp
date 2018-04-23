@@ -75,6 +75,7 @@ public:
             TpAllocator
     >;
     
+    // todo : reimplement this class.
     class iterator : public kcontain::i_mutable_iterator<line_type, iterator>
     {
     public:

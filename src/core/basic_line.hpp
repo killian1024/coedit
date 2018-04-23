@@ -123,6 +123,7 @@ public:
             if (cur_pos_ + 1 >= lne_->get_n_chars())
             {
                 lne_ = nullptr;
+                cur_pos_ = 0;
             }
             else
             {
@@ -137,6 +138,7 @@ public:
             if (cur_pos_ == 0)
             {
                 lne_ = nullptr;
+                cur_pos_ = 0;
             }
             else
             {
@@ -153,7 +155,7 @@ public:
         
         bool end() const noexcept override
         {
-            return lne_ == nullptr;
+            return lne_ == nullptr && cur_pos_ == 0;
         }
         
         value_type& operator *() noexcept override
@@ -274,35 +276,21 @@ public:
         ifs.close();
     }
     
-    // todo : reimplement this method.
     inline iterator begin() noexcept
     {
-        character_buffer_type& current_cb =
-                cb_cache_->get_character_buffer(cbid_);
-    
-        // todo : when the sharing buffers will be implemented, fix that shit :)
-        try
-        {
-            current_cb[cboffset_];
-        }
-        catch (...)
-        {
-            return end();
-        }
-        // end_shit
-    
-        if (current_cb[cboffset_] == LF || current_cb[cboffset_] == CR)
+        char_type cur_ch;
+        
+        if (n_chars_ == 0 || (cur_ch = (*this)[cboffset_], cur_ch == LF) || cur_ch ==  CR)
         {
             return end();
         }
         
-        return iterator({cbid_, cboffset_}, cb_cache_);
+        return iterator(this, 0);
     }
     
-    // todo : reimplement this method.
     inline iterator end() noexcept
     {
-        return iterator({EMPTY, 0}, cb_cache_);
+        return iterator(nullptr, 0);
     }
     
     void insert_character(char_type ch, loffset_t loffset)

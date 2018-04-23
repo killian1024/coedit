@@ -25,6 +25,34 @@ TEST(basic_line, constructor_with_parameters)
 }
 
 
+TEST(basic_line, begin_end)
+{
+    using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8,
+                                                                    std::allocator<int>>;
+    using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
+    using line_cache = cc::basic_line_cache<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
+    using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
+    
+    chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
+    line_cache lne_cache = line_cache(&cb_cache, 0);
+    cc::loffset_t loffset = 0;
+    line::char_type ch = 65;
+    line::char_type orig_ch = ch;
+    
+    auto it_lne1 = lne_cache.insert_first_line();
+    it_lne1->insert_character(ch++, loffset++);
+    it_lne1->insert_character(ch++, loffset++);
+    it_lne1->insert_character(ch++, loffset++);
+    it_lne1->insert_character(ch++, loffset++);
+    
+    std::size_t i = 0;
+    for (auto it = it_lne1->begin(); it != it_lne1->end(); ++it)
+    {
+        ASSERT_TRUE(*it == orig_ch + i++);
+    }
+}
+
+
 TEST(basic_line, insert_character)
 {
     using chatacter_buffer_cache = cc::basic_character_buffer_cache<char, 4, 8, 4, 8,

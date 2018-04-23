@@ -5,6 +5,7 @@
 #ifndef COEDIT_CORE_BASIC_FILE_EDITOR_HPP
 #define COEDIT_CORE_BASIC_FILE_EDITOR_HPP
 
+#include <sys/user.h>
 #include <memory>
 
 #include <kboost/kboost.hpp>
@@ -75,7 +76,6 @@ public:
             TpAllocator
     >;
     
-    // todo : reimplement this class.
     class iterator : public kcontain::i_mutable_iterator<line_type, iterator>
     {
     public:
@@ -133,7 +133,7 @@ public:
         
         value_type* operator ->() noexcept override
         {
-            return &(lnes_cache_->get_line(cur_));
+            return &lnes_cache_->get_line(cur_);
         }
         
         template<
@@ -156,17 +156,17 @@ public:
     };
     
     basic_file_editor(newline_format newl_format)
-            : cb_cache_(current_eid_)
-            , l_cache_(&cb_cache_, current_eid_)
+            : cb_cache_(cur_eid_)
+            , l_cache_(&cb_cache_, cur_eid_)
             , first_lid_(EMPTY)
             , current_lid_(EMPTY)
             , cursor_pos_({0, 0})
             , first_display_lid_(EMPTY)
             , n_lnes_(1)
             , newl_format_(newl_format)
-            , eid_(current_eid_)
+            , eid_(cur_eid_)
     {
-        current_eid_ = klow::add(current_eid_, 1);
+        cur_eid_ = klow::add(cur_eid_, 1);
         
         auto it_lne = l_cache_.insert_first_line();
         current_lid_ = it_lne->get_lid();
@@ -236,51 +236,9 @@ public:
 private:
     bool handle_newline()
     {
-        //line_type& current_lne = l_cache_.get_line(current_lid_);
-        //
-        //switch (newl_format_)
-        //{
-        //    case newline_format::UNIX:
-        //        current_lne.insert_character(LF, cursor_pos_.loffset);
-        //        break;
-        //
-        //    case newline_format::MAC:
-        //        current_lne.insert_character(CR, cursor_pos_.loffset);
-        //        break;
-        //
-        //    case newline_format::WINDOWS:
-        //        current_lne.insert_character(CR, cursor_pos_.loffset);
-        //        ++cursor_pos_.loffset;
-        //        current_lne.insert_character(LF, cursor_pos_.loffset);
-        //        break;
-        //}
-        //
-        //current_lne.set_n_chars(cursor_pos_.loffset + 1);
-        //
-        //lid_t new_lid = l_cache_.get_new_lid();
-        //
-        //l_cache_.insert(new_lid, line_type(
-        //        new_lid, current_lne.get_lid(), current_lne.get_nxt(),
-        //        &cb_cache_, &l_cache_));
-        //
-        //if (current_lne.get_nxt() != EMPTY)
-        //{
-        //    line_type& nxt_lne = l_cache_.get_line(current_lne.get_nxt());
-        //    nxt_lne.set_prev(new_lid);
-        //}
-        //
-        //current_lne.set_nxt(new_lid);
-        //
-        //current_lid_ = new_lid;
-        //cursor_pos_.loffset = 0;
-        //++n_lnes_;
-        //++cursor_pos_.coffset;
-        //
-        //return true;
-        
         auto it_lne = l_cache_.insert_line_after(current_lid_, cursor_pos_.loffset, newl_format_);
         
-        current_lid_ = it_lne->get_next();
+        current_lid_ = it_lne->get_lid();
         cursor_pos_.loffset = 0;
         ++n_lnes_;
         ++cursor_pos_.coffset;
@@ -446,17 +404,17 @@ private:
     
     eid_t eid_;
     
-    static eid_t current_eid_;
+    static eid_t cur_eid_;
 };
 
 
 using file_editor = basic_file_editor<
         char16_t,
-        8192,
-        160,
+        PAGE_SIZE / sizeof(char16_t),
+        320,
         128,
         1024,
-        8192,
+        16384,
         128,
         4096,
         std::allocator<int>
@@ -484,7 +442,7 @@ std::size_t basic_file_editor<
         LINE_ID_BUFFER_SIZE,
         LINE_ID_BUFFER_CACHE_SIZE,
         TpAllocator
->::current_eid_ = 0;
+>::cur_eid_ = 0;
 
 
 }

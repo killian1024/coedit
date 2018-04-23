@@ -10,10 +10,20 @@
 namespace cc = coedit::core;
 
 
+TEST(basic_file_editor, insert_character)
+{
+    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor::char_type data = 65;
+    
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+}
+
+
 TEST(basic_file_editor, handle_command)
 {
     cc::file_editor file_editr(cc::newline_format::UNIX);
-    cc::file_editor::char_type data = 48;
+    cc::file_editor::char_type data = 65;
     
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
@@ -30,13 +40,45 @@ TEST(basic_file_editor, handle_command)
 }
 
 
-TEST(basic_file_editor, insert_character)
+TEST(basic_file_editor, handle_newline)
 {
     cc::file_editor file_editr(cc::newline_format::UNIX);
-    cc::file_editor::char_type data = 48;
+    cc::file_editor::char_type data = 65;
     
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    
+    for (auto& lne : file_editr)
+    {
+        for (auto& ch : lne)
+        {
+        }
+    }
+}
+
+
+TEST(basic_file_editor, handle_end)
+{
+    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor::char_type data = 65;
+    
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::END));
 }
 
 

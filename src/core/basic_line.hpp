@@ -280,7 +280,7 @@ public:
     {
         char_type cur_ch;
         
-        if (n_chars_ == 0 || (cur_ch = (*this)[cboffset_], cur_ch == LF) || cur_ch ==  CR)
+        if (n_chars_ == 0 || (cur_ch = (*this)[0], cur_ch == LF) || cur_ch ==  CR)
         {
             return end();
         }
@@ -584,10 +584,15 @@ public:
     
     bool can_go_right(loffset_t cur_pos)
     {
+        if (cur_pos >= n_chars_)
+        {
+            return false;
+        }
+        
         character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         char_type val = cur_cb[cboffset_ + cur_pos];
         
-        return val != LF && val != CR && (nxt_ != EMPTY || cur_pos < n_chars_);
+        return val != LF && val != CR;
     }
     
     std::size_t get_line_length()

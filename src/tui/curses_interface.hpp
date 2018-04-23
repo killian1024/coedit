@@ -125,10 +125,10 @@ public:
                 clear();
                 
                 i = 0;
-                for (auto& line : *file_editr_)
+                for (auto& lne : *file_editr_)
                 {
                     j = 0;
-                    for (auto& ch : line)
+                    for (auto& ch : lne)
                     {
                         mvwprintw(win_, i, j, "%c", ch);
                         ++j;

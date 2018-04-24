@@ -10,6 +10,7 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_character_buffer_cache.hpp"
+#include "basic_file_editor.hpp"
 #include "basic_line_cache.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
@@ -35,6 +36,20 @@ template<
         typename TpAllocator
 >
 class basic_line_cache;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
+>
+class basic_file_editor;
 
 
 template<
@@ -98,14 +113,22 @@ public:
             TpAllocator
     >;
     
+    using file_editor_type = basic_file_editor<
+            TpChar,
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            LINE_CACHE_SIZE,
+            LINE_ID_BUFFER_SIZE,
+            LINE_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
+    >;
+    
     // todo : Implement this class with a more efficient logic.
     class iterator : public kcontain::i_mutable_iterator<char_type, iterator>
     {
     public:
-        using self_type = iterator;
-        
-        using value_type = char_type;
-    
         iterator() noexcept
                 : lne_(nullptr)
                 , cur_pos_(0)
@@ -117,8 +140,8 @@ public:
                 , cur_pos_(cur_pos)
         {
         }
-        
-        self_type& operator ++() noexcept override
+    
+        iterator& operator ++() noexcept override
         {
             if (cur_pos_ + 1 >= lne_->get_n_chars())
             {
@@ -132,8 +155,8 @@ public:
             
             return *this;
         }
-        
-        self_type& operator --() noexcept override
+    
+        iterator& operator --() noexcept override
         {
             if (cur_pos_ == 0)
             {
@@ -148,7 +171,83 @@ public:
             return *this;
         }
         
-        bool operator ==(const self_type& rhs) const noexcept override
+        bool operator ==(const iterator& rhs) const noexcept override
+        {
+            return lne_ == rhs.lne_ && cur_pos_ == rhs.cur_pos_;
+        }
+        
+        bool end() const noexcept override
+        {
+            return lne_ == nullptr && cur_pos_ == 0;
+        }
+    
+        char_type& operator *() noexcept override
+        {
+            return (*lne_)[cur_pos_];
+        }
+    
+        char_type* operator ->() noexcept override
+        {
+            return &(*lne_)[cur_pos_];
+        }
+    
+    protected:
+        line_type* lne_;
+        
+        loffset_t cur_pos_;
+    };
+    
+    // todo : Implement this class with a more efficient logic.
+    class terminal_iterator : public kcontain::i_mutable_iterator<char_type, terminal_iterator>
+    {
+    public:
+        terminal_iterator() noexcept
+                : lne_(nullptr)
+                , cur_pos_(0)
+                , term_x_sze_(0)
+        {
+        }
+    
+        terminal_iterator(line_type* lne, loffset_t cur_pos, loffset_t term_x_sze) noexcept
+                : lne_(lne)
+                , cur_pos_(cur_pos)
+                , term_x_sze_(term_x_sze)
+        {
+        }
+    
+        terminal_iterator& operator ++() noexcept override
+        {
+            ++cur_pos_;
+            
+            if (cur_pos_ >= lne_->get_n_chars() || cur_pos_ >= term_x_sze_)
+            {
+                lne_ = nullptr;
+                cur_pos_ = 0;
+            }
+            else
+            {
+                ++cur_pos_;
+            }
+            
+            return *this;
+        }
+    
+        terminal_iterator& operator --() noexcept override
+        {
+            if (cur_pos_ == 0)
+            {
+                lne_ = nullptr;
+                cur_pos_ = 0;
+            }
+            else
+            {
+                --cur_pos_;
+            }
+            
+            return *this;
+        }
+        
+        bool operator ==(const terminal_iterator& rhs) const noexcept override
         {
             return lne_ == rhs.lne_ && cur_pos_ == rhs.cur_pos_;
         }
@@ -158,34 +257,22 @@ public:
             return lne_ == nullptr && cur_pos_ == 0;
         }
         
-        value_type& operator *() noexcept override
+        char_type& operator *() noexcept override
         {
             return (*lne_)[cur_pos_];
         }
         
-        value_type* operator ->() noexcept override
+        char_type* operator ->() noexcept override
         {
             return &(*lne_)[cur_pos_];
         }
-        
-        // todo : Why ?
-        template<
-                typename TpChar__,
-                std::size_t CHARACTER_BUFFER_SIZE__,
-                std::size_t CHARACTER_BUFFER_CACHE_SIZE__,
-                std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE__,
-                std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE__,
-                std::size_t LINE_CACHE_SIZE__,
-                std::size_t LINE_ID_BUFFER_SIZE__,
-                std::size_t LINE_ID_BUFFER_CACHE_SIZE__,
-                typename TpAllocator__
-        >
-        friend class basic_file_editor;
     
     protected:
         line_type* lne_;
         
         loffset_t cur_pos_;
+    
+        loffset_t term_x_sze_;
     };
     
     basic_line()
@@ -195,15 +282,17 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , lne_cache_(nullptr)
             , cb_cache_(nullptr)
+            , lne_cache_(nullptr)
+            , file_editr_(nullptr)
     {
     }
     
     basic_line(
             lid_t lid,
             character_buffer_cache_type* cb_cache,
-            line_cache_type* lne_cache
+            line_cache_type* lne_cache,
+            file_editor_type* file_editr
     )
             : lid_(lid)
             , prev_(EMPTY)
@@ -213,6 +302,7 @@ public:
             , n_chars_(0)
             , cb_cache_(cb_cache)
             , lne_cache_(lne_cache)
+            , file_editr_(file_editr)
     {
         auto it_cb = cb_cache->insert_first_character_buffer();
         cbid_ = it_cb->get_cbid();
@@ -222,7 +312,8 @@ public:
             lid_t lid,
             lid_t prev,
             character_buffer_cache_type* cb_cache,
-            line_cache_type* lne_cache
+            line_cache_type* lne_cache,
+            file_editor_type* file_editr
     )
             : lid_(lid)
             , prev_(prev)
@@ -232,6 +323,7 @@ public:
             , n_chars_(0)
             , cb_cache_(cb_cache)
             , lne_cache_(lne_cache)
+            , file_editr_(file_editr)
     {
         line_type& prev_lne = lne_cache_->get_line(prev_);
         character_buffer_type& prev_cb = cb_cache_->get_character_buffer(prev_lne.cbid_);
@@ -256,10 +348,12 @@ public:
     basic_line(
             const stdfs::path& l_path,
             character_buffer_cache_type* cb_cache,
-            line_cache_type* l_cache
+            line_cache_type* l_cache,
+            file_editor_type* file_editr
     )
             : cb_cache_(cb_cache)
             , lne_cache_(l_cache)
+            , file_editr_(file_editr)
     {
         std::ifstream ifs;
         
@@ -373,7 +467,7 @@ public:
         line_type* cur_lne;
         cbid_t old_nxt_cbid;
         cbid_t old_prev_cbid;
-        size_t old_cb_sze;
+        std::size_t old_cb_sze;
         cbid_t old_nxt_nxt_cbid = EMPTY;
         cbid_t old_prev_prev_cbid = EMPTY;
         
@@ -557,7 +651,7 @@ public:
             throw invalid_operation_exception();
         }
     
-        line_type* nxt_lne = &(lne_cache_->get_line(nxt_));
+        line_type& nxt_lne = lne_cache_->get_line(nxt_);
         character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         
         // Erase the endline characters.
@@ -568,13 +662,8 @@ public:
         erase_character(n_chars_ - 1);
         
         // Assigning the pointers to the new target.
-        nxt_ = nxt_lne->nxt_;
-        n_chars_ += nxt_lne->n_chars_;
-        if (nxt_ != EMPTY)
-        {
-            nxt_lne = &(lne_cache_->get_line(nxt_));
-            nxt_lne->prev_ = lid_;
-        }
+        n_chars_ += nxt_lne.n_chars_;
+        unlink_line_to(nxt_lne);
     }
     
     bool can_go_left(loffset_t cur_pos)
@@ -589,13 +678,12 @@ public:
             return false;
         }
         
-        character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
-        char_type val = cur_cb[cboffset_ + cur_pos];
+        char_type val = (*this)[cur_pos];
         
         return val != LF && val != CR;
     }
     
-    std::size_t get_line_length()
+    loffset_t get_line_length()
     {
         character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         
@@ -668,7 +756,7 @@ public:
         return cboffset_;
     }
     
-    size_t get_n_chars() const
+    loffset_t get_n_chars() const
     {
         return n_chars_;
     }
@@ -676,6 +764,9 @@ public:
 private:
     void link_line_to(line_type& lne_to_link)
     {
+        lne_to_link.nxt_ = nxt_;
+        lne_to_link.prev_ = lid_;
+        
         if (nxt_ != EMPTY)
         {
             line_type& nxt_lne = lne_cache_->get_line(nxt_);
@@ -683,7 +774,17 @@ private:
         }
         
         nxt_ = lne_to_link.lid_;
-        lne_to_link.prev_ = lid_;
+    }
+    
+    void unlink_line_to(line_type& lne_to_unlink)
+    {
+        nxt_ = lne_to_unlink.nxt_;
+        
+        if (nxt_ != EMPTY)
+        {
+            line_type& nxt_lne = lne_cache_->get_line(nxt_);
+            nxt_lne.prev_ = lid_;
+        }
     }
     
     line_type* get_first_line_in_character_buffer(line_type& lne_ref)
@@ -717,11 +818,13 @@ private:
     
     cboffset_t cboffset_;
     
-    std::size_t n_chars_;
+    loffset_t n_chars_;
     
     character_buffer_cache_type* cb_cache_;
     
     line_cache_type* lne_cache_;
+    
+    file_editor_type* file_editr_;
 };
 
 

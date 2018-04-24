@@ -57,6 +57,11 @@ public:
     
         int inpt;
         bool needs_refresh;
+        core::coffset_t term_y_sze;
+        core::loffset_t term_x_sze;
+    
+        getmaxyx(win_, term_y_sze, term_x_sze);
+        file_editr_->set_terminal_size(term_y_sze, term_x_sze);
     
         while (true)
         {
@@ -68,6 +73,12 @@ public:
                 {
                     case 48:
                         goto execution_finish;
+                        
+                    case KEY_RESIZE:
+                        getmaxyx(win_, term_y_sze, term_x_sze);
+                        file_editr_->set_terminal_size(term_y_sze, term_x_sze);
+                        needs_refresh = true;
+                        break;
     
                     case KEY_ENTER:
                         file_editr_->handle_command(core::fec_t::NEWLINE);
@@ -125,10 +136,12 @@ public:
                 clear();
                 
                 i = 0;
-                for (auto& lne : *file_editr_)
+                for (auto lne = file_editr_->begin_terminal();
+                     lne != file_editr_->end_terminal();
+                     ++lne)
                 {
                     j = 0;
-                    for (auto& ch : lne)
+                    for (auto& ch : *lne)
                     {
                         mvwprintw(win_, i, j, "%c", ch);
                         ++j;
@@ -169,8 +182,8 @@ private:
         // Hace que la entrada del teclado no aparezca en la pantalla.
         noecho();
         
-        // El cursor_offset físico estará posicionado en el mismo lugar que el cursor_offset lógico después de un
-        //  refresh.
+        // El cursor_offset físico estará posicionado en el mismo lugar que el cursor_offset lógico
+        //  después de un refresh.
         leaveok(win_, false);
     
         // Verificar si la terminal soporta la utilización de colores.
@@ -179,6 +192,10 @@ private:
             // Inicializar la utilización de colores.
             start_color();
         }
+    
+        // Redimencionar el tamaño de la terminal.
+        //wresize(win_, 25, 80);
+        //resize_term(10, 20);
     }
     
     void end_curses()

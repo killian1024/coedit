@@ -64,7 +64,7 @@ public:
             TpAllocator
     >;
     
-    using lines_cache_type = basic_line_cache<
+    using line_cache_type = basic_line_cache<
             TpChar,
             CHARACTER_BUFFER_SIZE,
             CHARACTER_BUFFER_CACHE_SIZE,
@@ -86,102 +86,174 @@ public:
         using node_type = lid_t;
     
         iterator() noexcept
-                : cur_(EMPTY)
-                , lnes_cache_(nullptr)
+                : cur_lid_(EMPTY)
+                , lne_cache_(nullptr)
         {
         }
     
         iterator(
-                node_type cur,
-                lines_cache_type* lnes_cache
+                node_type cur_lid,
+                line_cache_type* lne_cache
         ) noexcept
-                : cur_(cur)
-                , lnes_cache_(lnes_cache)
+                : cur_lid_(cur_lid)
+                , lne_cache_(lne_cache)
         {
         }
         
         self_type& operator ++() noexcept override
         {
-            line_type& current_lne = lnes_cache_->get_line(cur_);
-            cur_ = current_lne.get_next();
+            line_type& cur_lne = lne_cache_->get_line(cur_lid_);
+            cur_lid_ = cur_lne.get_next();
             
             return *this;
         }
         
         self_type& operator --() noexcept override
         {
-            line_type& current_lne = lnes_cache_->get_line(cur_);
-            cur_ = current_lne.get_previous();
+            line_type& cur_lne = lne_cache_->get_line(cur_lid_);
+            cur_lid_ = cur_lne.get_previous();
             
             return *this;
         }
         
         bool operator ==(const self_type& rhs) const noexcept override
         {
-            return cur_ == rhs.cur_;
+            return cur_lid_ == rhs.cur_lid_;
         }
         
         bool end() const noexcept override
         {
-            return cur_ == EMPTY;
+            return cur_lid_ == EMPTY;
         }
         
         value_type& operator *() noexcept override
         {
-            return lnes_cache_->get_line(cur_);
+            return lne_cache_->get_line(cur_lid_);
         }
         
         value_type* operator ->() noexcept override
         {
-            return &lnes_cache_->get_line(cur_);
+            return &lne_cache_->get_line(cur_lid_);
         }
-        
-        template<
-                typename TpChar__,
-                std::size_t CHARACTER_BUFFER_SIZE__,
-                std::size_t CHARACTER_BUFFER_CACHE_SIZE__,
-                std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE__,
-                std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE__,
-                std::size_t LINE_CACHE_SIZE__,
-                std::size_t LINE_ID_BUFFER_SIZE__,
-                std::size_t LINE_ID_BUFFER_CACHE_SIZE__,
-                typename TpAllocator__
-        >
-        friend class basic_file_editor;
     
     protected:
-        node_type cur_;
+        node_type cur_lid_;
     
-        lines_cache_type* lnes_cache_;
+        line_cache_type* lne_cache_;
+    };
+    
+    class terminal_iterator : public kcontain::i_mutable_iterator<line_type, terminal_iterator>
+    {
+    public:
+        terminal_iterator() noexcept
+                : cur_lid_(EMPTY)
+                , term_y_sze_(0)
+                , cur_y_sze_(0)
+                , lne_cache_(nullptr)
+        {
+        }
+    
+        terminal_iterator(lid_t cur_lid, coffset_t term_y_sze, line_cache_type* lne_cache) noexcept
+                : cur_lid_(cur_lid)
+                , term_y_sze_(term_y_sze)
+                , cur_y_sze_(0)
+                , lne_cache_(lne_cache)
+        {
+        }
+    
+        terminal_iterator& operator ++() noexcept override
+        {
+            line_type& cur_lne = lne_cache_->get_line(cur_lid_);
+            cur_lid_ = cur_lne.get_next();
+            ++cur_y_sze_;
+            
+            if (cur_y_sze_ == term_y_sze_)
+            {
+                cur_lid_ = EMPTY;
+            }
+        
+            return *this;
+        }
+    
+        terminal_iterator& operator --() noexcept override
+        {
+            line_type& cur_lne = lne_cache_->get_line(cur_lid_);
+            cur_lid_ = cur_lne.get_previous();
+            --cur_y_sze_;
+        
+            return *this;
+        }
+    
+        bool operator ==(const terminal_iterator& rhs) const noexcept override
+        {
+            return cur_lid_ == rhs.cur_lid_;
+        }
+    
+        bool end() const noexcept override
+        {
+            return cur_lid_ == EMPTY;
+        }
+    
+        line_type& operator *() noexcept override
+        {
+            return lne_cache_->get_line(cur_lid_);
+        }
+    
+        line_type* operator ->() noexcept override
+        {
+            return &lne_cache_->get_line(cur_lid_);
+        }
+
+    protected:
+        lid_t cur_lid_;
+    
+        coffset_t term_y_sze_;
+        
+        coffset_t cur_y_sze_;
+    
+        line_cache_type* lne_cache_;
     };
     
     basic_file_editor(newline_format newl_format)
             : cb_cache_(cur_eid_)
-            , l_cache_(&cb_cache_, cur_eid_)
+            , lne_cache_(&cb_cache_, this)
             , first_lid_(EMPTY)
-            , current_lid_(EMPTY)
-            , cursor_pos_({0, 0})
+            , cur_lid_(EMPTY)
+            , term_y_sze_(0)
+            , term_x_sze_(0)
             , first_display_lid_(EMPTY)
+            , first_display_ch_(0)
+            , cursor_pos_({0, 0})
             , n_lnes_(1)
             , newl_format_(newl_format)
             , eid_(cur_eid_)
     {
         cur_eid_ = klow::add(cur_eid_, 1);
         
-        auto it_lne = l_cache_.insert_first_line();
-        current_lid_ = it_lne->get_lid();
-        first_lid_ = current_lid_;
-        first_display_lid_ = current_lid_;
+        auto it_lne = lne_cache_.insert_first_line();
+        cur_lid_ = it_lne->get_lid();
+        first_lid_ = cur_lid_;
+        first_display_lid_ = cur_lid_;
     }
     
     inline iterator begin() noexcept
     {
-        return iterator(first_lid_, &l_cache_);
+        return iterator(first_lid_, &lne_cache_);
+    }
+    
+    inline terminal_iterator begin_terminal() noexcept
+    {
+        return terminal_iterator(first_display_lid_, term_y_sze_, &lne_cache_);
     }
     
     inline iterator end() noexcept
     {
-        return iterator(EMPTY, &l_cache_);
+        return iterator(EMPTY, &lne_cache_);
+    }
+    
+    inline terminal_iterator end_terminal() noexcept
+    {
+        return terminal_iterator(EMPTY, 0, &lne_cache_);
     }
     
     bool handle_command(file_editor_command cmd)
@@ -222,33 +294,41 @@ public:
         }
         else
         {
-            line_type& current_lne = l_cache_.get_line(current_lid_);
+            line_type& current_lne = lne_cache_.get_line(cur_lid_);
             current_lne.insert_character(ch, cursor_pos_.loffset);
             ++cursor_pos_.loffset;
         }
+    }
+    
+    void set_terminal_size(coffset_t term_y_sze, loffset_t term_x_sze)
+    {
+        term_y_sze_ = term_y_sze;
+        term_x_sze_ = term_x_sze;
     }
     
     const cursor_position& get_cursor_position()
     {
         return cursor_pos_;
     }
+    
+    eid_t get_eid() const noexcept
+    {
+        return eid_;
+    }
 
 private:
     bool handle_newline()
     {
-        auto it_lne = l_cache_.insert_line_after(current_lid_, cursor_pos_.loffset, newl_format_);
-        
-        current_lid_ = it_lne->get_lid();
-        cursor_pos_.loffset = 0;
-        ++n_lnes_;
-        ++cursor_pos_.coffset;
+        lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
+        handle_go_down();
+        handle_home();
         
         return true;
     }
     
     bool handle_backspace()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
+        line_type& current_lne = lne_cache_.get_line(cur_lid_);
         lid_t prev_lid = current_lne.get_previous();
         
         if (cursor_pos_.loffset > 0)
@@ -260,16 +340,16 @@ private:
         }
         else if (prev_lid != EMPTY)
         {
-            line_type& previous_lne = l_cache_.get_line(prev_lid);
+            line_type& previous_lne = lne_cache_.get_line(prev_lid);
             auto prev_lne_length = previous_lne.get_line_length();
             
             previous_lne.merge_with_next_line();
             
-            if (first_display_lid_ == current_lid_)
+            if (first_display_lid_ == cur_lid_)
             {
                 first_display_lid_ = prev_lid;
             }
-            current_lid_ = prev_lid;
+            cur_lid_ = prev_lid;
             
             --n_lnes_;
             if (cursor_pos_.coffset > 0)
@@ -286,14 +366,14 @@ private:
     
     bool handle_go_left()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
+        line_type& current_lne = lne_cache_.get_line(cur_lid_);
         
         if (current_lne.can_go_left(cursor_pos_.loffset))
         {
             --cursor_pos_.loffset;
             return true;
         }
-        else if (current_lid_ != first_lid_ && handle_go_up() && handle_end())
+        else if (cur_lid_ != first_lid_ && handle_go_up() && handle_end())
         {
             return true;
         }
@@ -303,7 +383,7 @@ private:
     
     bool handle_go_right()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
+        line_type& current_lne = lne_cache_.get_line(cur_lid_);
         
         if (current_lne.can_go_right(cursor_pos_.loffset))
         {
@@ -324,17 +404,22 @@ private:
     
     bool handle_go_up()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
+        line_type& current_lne = lne_cache_.get_line(cur_lid_);
         lid_t prev_lid = current_lne.get_previous();
     
         if (prev_lid != EMPTY)
         {
-            current_lid_ = prev_lid;
+            cur_lid_ = prev_lid;
             cursor_pos_.loffset = 0;
             
             if (cursor_pos_.coffset > 0)
             {
                 --cursor_pos_.coffset;
+            }
+            else
+            {
+                line_type& first_display_lne = lne_cache_.get_line(first_display_lid_);
+                first_display_lid_ = first_display_lne.get_previous();
             }
             
             return true;
@@ -345,18 +430,22 @@ private:
     
     bool handle_go_down()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
-        lid_t nxt_lid = current_lne.get_next();
+        line_type& cur_lne = lne_cache_.get_line(cur_lid_);
+        lid_t nxt_lid = cur_lne.get_next();
     
         if (nxt_lid != EMPTY)
         {
-            current_lid_ = nxt_lid;
+            cur_lid_ = nxt_lid;
             cursor_pos_.loffset = 0;
             
-            // todo : get window size to check
-            if (cursor_pos_.coffset < ~0)
+            if (cursor_pos_.coffset + 1 < term_y_sze_)
             {
                 ++cursor_pos_.coffset;
+            }
+            else
+            {
+                line_type& first_display_lne = lne_cache_.get_line(first_display_lid_);
+                first_display_lid_ = first_display_lne.get_next();
             }
             
             return true;
@@ -373,10 +462,10 @@ private:
     
     bool handle_end()
     {
-        line_type& current_lne = l_cache_.get_line(current_lid_);
+        line_type& cur_lne = lne_cache_.get_line(cur_lid_);
         bool done = false;
         
-        while (current_lne.can_go_right(cursor_pos_.loffset))
+        while (cur_lne.can_go_right(cursor_pos_.loffset))
         {
             ++cursor_pos_.loffset;
             done = true;
@@ -388,15 +477,21 @@ private:
 private:
     characters_buffer_cache_type cb_cache_;
     
-    lines_cache_type l_cache_;
+    line_cache_type lne_cache_;
     
     lid_t first_lid_;
     
-    lid_t current_lid_;
+    lid_t cur_lid_;
     
-    cursor_position cursor_pos_;
+    coffset_t term_y_sze_;
+    
+    loffset_t term_x_sze_;
     
     lid_t first_display_lid_;
+    
+    loffset_t first_display_ch_;
+    
+    cursor_position cursor_pos_;
     
     std::size_t n_lnes_;
     

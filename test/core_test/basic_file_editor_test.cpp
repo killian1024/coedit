@@ -54,18 +54,22 @@ TEST(basic_file_editor, handle_newline)
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
-    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
-    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_UP));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::HOME));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
     
+    std::size_t n_lnes = 0;
     for (auto& lne : file_editr)
     {
+        ++n_lnes;
         for (auto& ch : lne)
         {
         }
     }
+    
+    EXPECT_TRUE(n_lnes == 3);
 }
 
 

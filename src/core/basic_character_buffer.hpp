@@ -439,6 +439,9 @@ private:
     
     void link_character_buffer_to(character_buffer_type& cb_to_link)
     {
+        cb_to_link.nxt_ = nxt_;
+        cb_to_link.prev_ = cbid_;
+        
         if (nxt_ != EMPTY)
         {
             character_buffer_type& nxt_cb = cb_cache_->get_character_buffer(nxt_);
@@ -446,7 +449,6 @@ private:
         }
         
         nxt_ = cb_to_link.cbid_;
-        cb_to_link.prev_ = cbid_;
     }
     
     void unlink_character_buffer_to(character_buffer_type& cb_to_unlink)

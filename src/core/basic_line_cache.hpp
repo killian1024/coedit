@@ -12,8 +12,9 @@
 #include <kboost/kboost.hpp>
 
 #include "basic_character_buffer_cache.hpp"
-#include "basic_line.hpp"
+#include "basic_file_editor.hpp"
 #include "basic_id_buffer_cache.hpp"
+#include "basic_line.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"
 
@@ -37,6 +38,20 @@ template<
         typename TpAllocator
 >
 class basic_line;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        std::size_t LINE_CACHE_SIZE,
+        std::size_t LINE_ID_BUFFER_SIZE,
+        std::size_t LINE_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
+>
+class basic_file_editor;
 
 
 template<
@@ -79,22 +94,34 @@ public:
             TpAllocator
     >;
     
+    using line_cache_type = kcontain::static_cache<lid_t, line_type, LINE_CACHE_SIZE>;
+    
     using line_id_buffer_cache_type = basic_id_buffer_cache<
             LINE_ID_BUFFER_SIZE,
             LINE_ID_BUFFER_CACHE_SIZE
     >;
     
-    using line_cache_type = kcontain::static_cache<lid_t, line_type, LINE_CACHE_SIZE>;
+    using file_editor_type = basic_file_editor<
+            TpChar,
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            LINE_CACHE_SIZE,
+            LINE_ID_BUFFER_SIZE,
+            LINE_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
+    >;
     
     using iterator = typename line_cache_type::iterator;
     
     using const_iterator = typename line_cache_type::const_iterator;
     
-    basic_line_cache(character_buffer_cache_type* cb_cache, eid_t eid)
+    basic_line_cache(character_buffer_cache_type* cb_cache, file_editor_type* file_editr)
             : cb_cache_(cb_cache)
             , lne_cache_()
-            , lidb_cache_(eid, "lidb")
-            , eid_(eid)
+            , lidb_cache_(file_editr->get_eid(), "lidb")
+            , file_editr_(file_editr)
             , swap_usd_(false)
             , old_lid_(EMPTY)
     {
@@ -129,7 +156,6 @@ public:
         {
             cb_cache_ = rhs.cb_cache_;
             lidb_cache_ = rhs.lidb_cache_;
-            eid_ = rhs.eid_;
             swap_usd_ = rhs.swap_usd_;
             old_lid_ = rhs.old_lid_;
         }
@@ -143,7 +169,6 @@ public:
         {
             std::swap(cb_cache_, rhs.cb_cache_);
             lidb_cache_ = std::move(rhs.lidb_cache_);
-            std::swap(eid_, rhs.eid_);
             std::swap(swap_usd_, rhs.swap_usd_);
             std::swap(old_lid_, rhs.old_lid_);
         }
@@ -227,7 +252,7 @@ public:
     {
         lid_t new_lid = get_new_lid();
         
-        return insert_line_in_cache(new_lid, line_type(new_lid, cb_cache_, this));
+        return insert_line_in_cache(new_lid, line_type(new_lid, cb_cache_, this, file_editr_));
     }
     
     iterator insert_line_after(lid_t lid, loffset_t loffset, newline_format newl_format)
@@ -253,7 +278,8 @@ public:
                 break;
         }
         
-        it_newline = insert_line_in_cache(new_lid, line_type(new_lid, lid, cb_cache_, this));
+        it_newline = insert_line_in_cache(new_lid, line_type(
+                new_lid, lid, cb_cache_, this, file_editr_));
         
         return it_newline;
     }
@@ -342,7 +368,7 @@ private:
         lne_path.append("coedit-");
         lne_path.concat(std::to_string(ksys::get_pid()));
         lne_path.concat("-");
-        lne_path.concat(std::to_string(eid_));
+        lne_path.concat(std::to_string(file_editr_->get_eid()));
         lne_path.concat("-l-");
         
         return lne_path;
@@ -365,7 +391,7 @@ private:
     void load_line(lid_t lid)
     {
         stdfs::path l_path = get_line_path(lid);
-        insert_line_in_cache(lid, line_type(l_path, cb_cache_, this));
+        insert_line_in_cache(lid, line_type(l_path, cb_cache_, this, file_editr_));
         remove(l_path.c_str());
     }
     
@@ -374,7 +400,7 @@ private:
         if (lidb_cache_.is_set(lid))
         {
             stdfs::path l_path = get_line_path(lid);
-            insert_line_in_cache(lid, line_type(l_path, cb_cache_, this));
+            insert_line_in_cache(lid, line_type(l_path, cb_cache_, this, file_editr_));
             remove(l_path.c_str());
             return true;
         }
@@ -391,7 +417,7 @@ private:
     
     line_id_buffer_cache_type lidb_cache_;
     
-    eid_t eid_;
+    file_editor_type* file_editr_;
     
     bool swap_usd_;
     

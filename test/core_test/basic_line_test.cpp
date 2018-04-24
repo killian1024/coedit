@@ -18,6 +18,7 @@ TEST(basic_line, constructor_with_parameters)
     using line_cache = cc::basic_line_cache<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
+    // HERE pass the file editor to line_cache.
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
     line_cache lne_cache = line_cache(&cb_cache, 0);
     

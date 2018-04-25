@@ -132,22 +132,18 @@ public:
                 std::size_t i;
                 std::size_t j;
                 auto cursr = file_editr_->get_cursor_position();
+    
+                wclear(win_);
                 
-                clear();
-                
-                i = 0;
                 for (auto lne = file_editr_->begin_terminal();
                      lne != file_editr_->end_terminal();
                      ++lne)
                 {
-                    j = 0;
-                    for (auto& ch : *lne)
+                    for (auto ch = lne->begin_terminal(); ch != lne->end_terminal(); ++ch)
                     {
-                        mvwprintw(win_, i, j, "%c", ch);
-                        ++j;
+                        mvwprintw(win_, lne.get_current_y_position(), ch.get_current_x_position(),
+                                  "%c", *ch);
                     }
-                    
-                    ++i;
                 }
     
                 wmove(win_, cursr.coffset, cursr.loffset);

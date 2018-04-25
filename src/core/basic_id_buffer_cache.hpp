@@ -12,7 +12,6 @@
 
 #include <kboost/kboost.hpp>
 
-#include "basic_file_editor.hpp"
 #include "basic_id_buffer.hpp"
 #include "core_exception.hpp"
 #include "fundamental_types.hpp"

@@ -30,6 +30,28 @@ template<
         std::size_t CHARACTER_BUFFER_CACHE_SIZE,
         std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
         std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
+>
+class basic_character_buffer;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+        typename TpAllocator
+>
+class basic_character_buffer_cache;
+
+
+template<
+        typename TpChar,
+        std::size_t CHARACTER_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_CACHE_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_SIZE,
+        std::size_t CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
         std::size_t LINE_CACHE_SIZE,
         std::size_t LINE_ID_BUFFER_SIZE,
         std::size_t LINE_ID_BUFFER_CACHE_SIZE,
@@ -203,23 +225,27 @@ public:
     public:
         terminal_iterator() noexcept
                 : lne_(nullptr)
-                , cur_pos_(0)
                 , term_x_sze_(0)
+                , cur_pos_(0)
+                , limit_pos_(0)
         {
         }
     
-        terminal_iterator(line_type* lne, loffset_t cur_pos, loffset_t term_x_sze) noexcept
+        terminal_iterator(
+                line_type* lne,
+                loffset_t first_display_character,
+                loffset_t term_x_sze
+        ) noexcept
                 : lne_(lne)
-                , cur_pos_(cur_pos)
                 , term_x_sze_(term_x_sze)
+                , cur_pos_(first_display_character)
+                , limit_pos_(term_x_sze + first_display_character)
         {
         }
     
         terminal_iterator& operator ++() noexcept override
         {
-            ++cur_pos_;
-            
-            if (cur_pos_ >= lne_->get_n_chars() || cur_pos_ >= term_x_sze_)
+            if (cur_pos_ + 1 >= lne_->get_n_chars() || cur_pos_ + 1 >= limit_pos_)
             {
                 lne_ = nullptr;
                 cur_pos_ = 0;
@@ -267,12 +293,19 @@ public:
             return &(*lne_)[cur_pos_];
         }
     
+        coffset_t get_current_x_position() const noexcept
+        {
+            return term_x_sze_ - (limit_pos_ - cur_pos_);
+        }
+    
     protected:
         line_type* lne_;
+    
+        loffset_t term_x_sze_;
         
         loffset_t cur_pos_;
     
-        loffset_t term_x_sze_;
+        loffset_t limit_pos_;
     };
     
     basic_line()
@@ -382,9 +415,27 @@ public:
         return iterator(this, 0);
     }
     
+    inline terminal_iterator begin_terminal() noexcept
+    {
+        char_type cur_ch;
+        
+        if (n_chars_ == 0 || (cur_ch = (*this)[0], cur_ch == LF) || cur_ch ==  CR)
+        {
+            return end_terminal();
+        }
+        
+        return terminal_iterator(
+                this, file_editr_->get_first_display_character(), file_editr_->get_term_x_sze());
+    }
+    
     inline iterator end() noexcept
     {
-        return iterator(nullptr, 0);
+        return iterator();
+    }
+    
+    inline terminal_iterator end_terminal() noexcept
+    {
+        return terminal_iterator();
     }
     
     void insert_character(char_type ch, loffset_t loffset)

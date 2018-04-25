@@ -17,10 +17,11 @@ TEST(basic_line, constructor_with_parameters)
     using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     using line_cache = cc::basic_line_cache<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
+    using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
-    // HERE pass the file editor to line_cache.
+    file_editor file_editr(cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
-    line_cache lne_cache = line_cache(&cb_cache, 0);
+    line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     
     auto it_lne = lne_cache.insert_first_line();
 }
@@ -33,9 +34,11 @@ TEST(basic_line, begin_end)
     using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     using line_cache = cc::basic_line_cache<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
+    using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
+    file_editor file_editr(cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
-    line_cache lne_cache = line_cache(&cb_cache, 0);
+    line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     cc::loffset_t loffset = 0;
     line::char_type ch = 65;
     line::char_type orig_ch = ch;
@@ -61,9 +64,11 @@ TEST(basic_line, insert_character)
     using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     using line_cache = cc::basic_line_cache<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
+    using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
+    file_editor file_editr(cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
-    line_cache lne_cache = line_cache(&cb_cache, 0);
+    line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     cc::loffset_t loffset = 0;
     line::char_type ch = 65;
     line::char_type orig_ch = ch;
@@ -106,9 +111,11 @@ TEST(basic_line, erase_character)
     using chatacter_buffer = cc::basic_character_buffer<char, 4, 8, 4, 8, std::allocator<int>>;
     using line_cache = cc::basic_line_cache<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
+    using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
+    file_editor file_editr(cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
-    line_cache lne_cache = line_cache(&cb_cache, 0);
+    line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     cc::loffset_t loffset = 0;
     line::char_type ch = 65;
     

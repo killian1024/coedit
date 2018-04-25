@@ -147,32 +147,43 @@ public:
             TpAllocator
     >;
     
+    /** Class that represents a sequence container. */
+    template<typename T>
+    using vector_type = std::vector<T, allocator_type<T>>;
+    
     // todo : Implement this class with a more efficient logic.
     class iterator : public kcontain::i_mutable_iterator<char_type, iterator>
     {
     public:
         iterator() noexcept
                 : lne_(nullptr)
-                , cur_pos_(0)
+                , lne_len_(0)
+                , cur_loffset_(0)
         {
         }
     
-        iterator(line_type* lne, loffset_t cur_pos) noexcept
+        iterator(line_type* lne) noexcept
                 : lne_(lne)
-                , cur_pos_(cur_pos)
+                , lne_len_(lne->get_line_length())
+                , cur_loffset_(0)
         {
+            char_type cur_ch;
+    
+            if (lne_len_ == 0 || (cur_ch = (*lne_)[0], cur_ch == LF) || cur_ch ==  CR)
+            {
+                reset_iterator();
+            }
         }
     
         iterator& operator ++() noexcept override
         {
-            if (cur_pos_ + 1 >= lne_->get_n_chars())
+            if (cur_loffset_ + 1 >= lne_len_)
             {
-                lne_ = nullptr;
-                cur_pos_ = 0;
+                reset_iterator();
             }
             else
             {
-                ++cur_pos_;
+                ++cur_loffset_;
             }
             
             return *this;
@@ -180,14 +191,13 @@ public:
     
         iterator& operator --() noexcept override
         {
-            if (cur_pos_ == 0)
+            if (cur_loffset_ == 0)
             {
-                lne_ = nullptr;
-                cur_pos_ = 0;
+                reset_iterator();
             }
             else
             {
-                --cur_pos_;
+                --cur_loffset_;
             }
             
             return *this;
@@ -195,28 +205,42 @@ public:
         
         bool operator ==(const iterator& rhs) const noexcept override
         {
-            return lne_ == rhs.lne_ && cur_pos_ == rhs.cur_pos_;
+            return lne_ == rhs.lne_ &&
+                   lne_len_ == rhs.lne_len_ &&
+                   cur_loffset_ == rhs.cur_loffset_;
         }
         
         bool end() const noexcept override
         {
-            return lne_ == nullptr && cur_pos_ == 0;
+            return lne_ == nullptr &&
+                   lne_len_ == 0 &&
+                   cur_loffset_ == 0;
         }
     
         char_type& operator *() noexcept override
         {
-            return (*lne_)[cur_pos_];
+            return (*lne_)[cur_loffset_];
         }
     
         char_type* operator ->() noexcept override
         {
-            return &(*lne_)[cur_pos_];
+            return &(*lne_)[cur_loffset_];
+        }
+
+    protected:
+        void reset_iterator()
+        {
+            lne_ = nullptr;
+            lne_len_ = 0;
+            cur_loffset_ = 0;
         }
     
     protected:
         line_type* lne_;
+    
+        loffset_t lne_len_;
         
-        loffset_t cur_pos_;
+        loffset_t cur_loffset_;
     };
     
     // todo : Implement this class with a more efficient logic.
@@ -225,9 +249,10 @@ public:
     public:
         terminal_iterator() noexcept
                 : lne_(nullptr)
+                , lne_len_(0)
+                , cur_loffset_(0)
+                , limit_loffset_(0)
                 , term_x_sze_(0)
-                , cur_pos_(0)
-                , limit_pos_(0)
         {
         }
     
@@ -237,22 +262,28 @@ public:
                 loffset_t term_x_sze
         ) noexcept
                 : lne_(lne)
+                , lne_len_(lne->get_line_length())
+                , cur_loffset_(first_display_character)
+                , limit_loffset_(term_x_sze + first_display_character - 1)
                 , term_x_sze_(term_x_sze)
-                , cur_pos_(first_display_character)
-                , limit_pos_(term_x_sze + first_display_character)
         {
+            char_type cur_ch;
+    
+            if (lne_->get_n_chars() == 0 || (cur_ch = (*lne_)[0], cur_ch == LF) || cur_ch ==  CR)
+            {
+                reset_iterator();
+            }
         }
     
         terminal_iterator& operator ++() noexcept override
         {
-            if (cur_pos_ + 1 >= lne_->get_n_chars() || cur_pos_ + 1 >= limit_pos_)
+            if (cur_loffset_ + 1 >= lne_len_ || cur_loffset_ >= limit_loffset_)
             {
-                lne_ = nullptr;
-                cur_pos_ = 0;
+                reset_iterator();
             }
             else
             {
-                ++cur_pos_;
+                ++cur_loffset_;
             }
             
             return *this;
@@ -260,14 +291,13 @@ public:
     
         terminal_iterator& operator --() noexcept override
         {
-            if (cur_pos_ == 0)
+            if (cur_loffset_ == 0)
             {
-                lne_ = nullptr;
-                cur_pos_ = 0;
+                reset_iterator();
             }
             else
             {
-                --cur_pos_;
+                --cur_loffset_;
             }
             
             return *this;
@@ -275,37 +305,200 @@ public:
         
         bool operator ==(const terminal_iterator& rhs) const noexcept override
         {
-            return lne_ == rhs.lne_ && cur_pos_ == rhs.cur_pos_;
+            return lne_ == rhs.lne_ &&
+                   lne_len_ == rhs.lne_len_ &&
+                   cur_loffset_ == rhs.cur_loffset_ &&
+                   limit_loffset_ == rhs.limit_loffset_ &&
+                   term_x_sze_ == rhs.term_x_sze_;
         }
         
         bool end() const noexcept override
         {
-            return lne_ == nullptr && cur_pos_ == 0;
+            return lne_ == nullptr &&
+                   lne_len_ == 0 &&
+                   cur_loffset_ == 0 &&
+                   limit_loffset_ == 0 &&
+                   term_x_sze_ == 0;
         }
         
         char_type& operator *() noexcept override
         {
-            return (*lne_)[cur_pos_];
+            return (*lne_)[cur_loffset_];
         }
         
         char_type* operator ->() noexcept override
         {
-            return &(*lne_)[cur_pos_];
+            return &(*lne_)[cur_loffset_];
         }
     
         coffset_t get_current_x_position() const noexcept
         {
-            return term_x_sze_ - (limit_pos_ - cur_pos_);
+            return term_x_sze_ - (limit_loffset_ + 1 - cur_loffset_);
+        }
+
+    protected:
+        void reset_iterator()
+        {
+            lne_ = nullptr;
+            lne_len_ = 0;
+            cur_loffset_ = 0;
+            limit_loffset_ = 0;
+            term_x_sze_ = 0;
         }
     
     protected:
         line_type* lne_;
     
+        loffset_t lne_len_;
+    
+        loffset_t cur_loffset_;
+    
+        loffset_t limit_loffset_;
+    
+        loffset_t term_x_sze_;
+    };
+    
+    // todo : Implement this class with a more efficient logic.
+    class lazy_terminal_iterator
+            : public kcontain::i_mutable_iterator<char_type, lazy_terminal_iterator>
+    {
+    public:
+        lazy_terminal_iterator() noexcept
+                : lne_(nullptr)
+                , lne_len_(0)
+                , cur_loffset_(0)
+                , limit_loffset_(0)
+                , term_x_sze_(0)
+                , last_len_printed_(nullptr)
+        {
+        }
+    
+        lazy_terminal_iterator(
+                line_type* lne,
+                loffset_t first_display_character,
+                loffset_t term_x_sze,
+                loffset_t* last_len_printed_
+        ) noexcept
+                : lne_(lne)
+                , lne_len_(lne->get_line_length())
+                , cur_loffset_(first_display_character)
+                , limit_loffset_(term_x_sze + first_display_character - 1)
+                , term_x_sze_(term_x_sze)
+                , last_len_printed_(last_len_printed_)
+        {
+            char_type cur_ch;
+    
+            if ((lne_len_ == 0 || (cur_ch = (*lne_)[0], cur_ch == LF) || cur_ch ==  CR) &&
+                *last_len_printed_ == 0)
+            {
+                reset_iterator();
+            }
+        }
+    
+        lazy_terminal_iterator& operator ++() noexcept override
+        {
+            if ((cur_loffset_ + 1 >= lne_len_ &&
+                 get_current_x_position() + 1 >= *last_len_printed_) ||
+                cur_loffset_ >= limit_loffset_)
+            {
+                *last_len_printed_ = get_current_x_position() + 1;
+                reset_iterator();
+            }
+            else
+            {
+                ++cur_loffset_;
+            }
+            
+            return *this;
+        }
+    
+        lazy_terminal_iterator& operator --() noexcept override
+        {
+            //throw invalid_operation_exception();
+        }
+        
+        bool operator ==(const lazy_terminal_iterator& rhs) const noexcept override
+        {
+            return lne_ == rhs.lne_ &&
+                   lne_len_ == rhs.lne_len_ &&
+                   cur_loffset_ == rhs.cur_loffset_ &&
+                   limit_loffset_ == rhs.limit_loffset_ &&
+                   term_x_sze_ == rhs.term_x_sze_ &&
+                   last_len_printed_ == rhs.last_len_printed_;
+        }
+        
+        bool end() const noexcept override
+        {
+            return lne_ == nullptr &&
+                   lne_len_ == 0 &&
+                   cur_loffset_ == 0 &&
+                   limit_loffset_ == 0 &&
+                   term_x_sze_ == 0 &&
+                   last_len_printed_ == nullptr;
+        }
+        
+        char_type& operator *() noexcept override
+        {
+            static char_type blank = 0x20; // hgkhjfgjhkgdfhkjhkjkjhfdg
+    
+            if (out_of_line() && less_than_last_length_printed())
+            {
+                return blank;
+            }
+            
+            return (*lne_)[cur_loffset_];
+        }
+        
+        char_type* operator ->() noexcept override
+        {
+            static char_type blank = 0x20; // hgjkhgjkhjghjghjg
+    
+            if (out_of_line() && less_than_last_length_printed())
+            {
+                return &blank;
+            }
+            
+            return &(*lne_)[cur_loffset_];
+        }
+        
+        coffset_t get_current_x_position() const noexcept
+        {
+            return term_x_sze_ - (limit_loffset_ + 1 - cur_loffset_);
+        }
+
+    protected:
+        bool out_of_line() const noexcept
+        {
+            return cur_loffset_ >= lne_len_;
+        }
+        
+        bool less_than_last_length_printed() const noexcept
+        {
+            return get_current_x_position() < *last_len_printed_;
+        }
+        
+        void reset_iterator()
+        {
+            lne_ = nullptr;
+            lne_len_ = 0;
+            cur_loffset_ = 0;
+            limit_loffset_ = 0;
+            term_x_sze_ = 0;
+            last_len_printed_ = nullptr;
+        }
+    
+    protected:
+        line_type* lne_;
+        
+        loffset_t lne_len_;
+        
+        loffset_t cur_loffset_;
+        
+        loffset_t limit_loffset_;
+    
         loffset_t term_x_sze_;
         
-        loffset_t cur_pos_;
-    
-        loffset_t limit_pos_;
+        loffset_t* last_len_printed_;
     };
     
     basic_line()
@@ -315,6 +508,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
+            , last_len_printed_(0)
             , cb_cache_(nullptr)
             , lne_cache_(nullptr)
             , file_editr_(nullptr)
@@ -333,6 +527,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
+            , last_len_printed_(0)
             , cb_cache_(cb_cache)
             , lne_cache_(lne_cache)
             , file_editr_(file_editr)
@@ -354,6 +549,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
+            , last_len_printed_(0)
             , cb_cache_(cb_cache)
             , lne_cache_(lne_cache)
             , file_editr_(file_editr)
@@ -399,33 +595,31 @@ public:
         ifs.read((char*)&cbid_, sizeof(cbid_));
         ifs.read((char*)&cboffset_, sizeof(cboffset_));
         ifs.read((char*)&n_chars_, sizeof(n_chars_));
+        ifs.read((char*)&last_len_printed_, sizeof(last_len_printed_));
         
         ifs.close();
     }
     
     inline iterator begin() noexcept
     {
-        char_type cur_ch;
-        
-        if (n_chars_ == 0 || (cur_ch = (*this)[0], cur_ch == LF) || cur_ch ==  CR)
-        {
-            return end();
-        }
-        
-        return iterator(this, 0);
+        return iterator(this);
     }
     
     inline terminal_iterator begin_terminal() noexcept
     {
-        char_type cur_ch;
-        
-        if (n_chars_ == 0 || (cur_ch = (*this)[0], cur_ch == LF) || cur_ch ==  CR)
-        {
-            return end_terminal();
-        }
-        
         return terminal_iterator(
-                this, file_editr_->get_first_display_character(), file_editr_->get_term_x_sze());
+                this,
+                file_editr_->get_first_display_character(),
+                file_editr_->get_term_x_sze());
+    }
+    
+    inline lazy_terminal_iterator begin_lazy_terminal() noexcept
+    {
+        return lazy_terminal_iterator(
+                this,
+                file_editr_->get_first_display_character(),
+                file_editr_->get_term_x_sze(),
+                &last_len_printed_);
     }
     
     inline iterator end() noexcept
@@ -436,6 +630,11 @@ public:
     inline terminal_iterator end_terminal() noexcept
     {
         return terminal_iterator();
+    }
+    
+    inline lazy_terminal_iterator end_lazy_terminal() noexcept
+    {
+        return lazy_terminal_iterator();
     }
     
     void insert_character(char_type ch, loffset_t loffset)
@@ -766,6 +965,7 @@ public:
         ofs.write((char*)&cbid_, sizeof(cbid_));
         ofs.write((char*)&cboffset_, sizeof(cboffset_));
         ofs.write((char*)&n_chars_, sizeof(n_chars_));
+        ofs.write((char*)&last_len_printed_, sizeof(last_len_printed_));
         
         ofs.close();
     }
@@ -870,6 +1070,10 @@ private:
     cboffset_t cboffset_;
     
     loffset_t n_chars_;
+    
+    // HERE : seteas esto desde el constructor de basic_file y entonces sabes donde indexarte en el
+    // vector de las antiguas longitudes de lineas, y también podrás actualizarlo.
+    loffset_t cur_y_pos_;
     
     character_buffer_cache_type* cb_cache_;
     

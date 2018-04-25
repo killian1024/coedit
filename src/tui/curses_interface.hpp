@@ -133,13 +133,15 @@ public:
                 std::size_t j;
                 auto cursr = file_editr_->get_cursor_position();
     
-                wclear(win_);
+                //wclear(win_);
                 
-                for (auto lne = file_editr_->begin_terminal();
-                     lne != file_editr_->end_terminal();
+                for (auto lne = file_editr_->begin_lazy_terminal();
+                     lne != file_editr_->end_lazy_terminal();
                      ++lne)
                 {
-                    for (auto ch = lne->begin_terminal(); ch != lne->end_terminal(); ++ch)
+                    for (auto ch = lne->begin_lazy_terminal();
+                         ch != lne->end_lazy_terminal();
+                         ++ch)
                     {
                         mvwprintw(win_, lne.get_current_y_position(), ch.get_current_x_position(),
                                   "%c", *ch);

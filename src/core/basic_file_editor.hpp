@@ -104,6 +104,10 @@ public:
             TpAllocator
     >;
     
+    /** Class that represents a sequence container. */
+    template<typename T>
+    using vector_type = std::vector<T, allocator_type<T>>;
+    
     class iterator : public kcontain::i_mutable_iterator<line_type, iterator>
     {
     public:
@@ -252,10 +256,10 @@ public:
 
     protected:
         lid_t cur_lid_;
-    
-        coffset_t term_y_sze_;
         
         coffset_t cur_y_pos_;
+    
+        coffset_t term_y_sze_;
     
         line_cache_type* lne_cache_;
     };
@@ -275,14 +279,14 @@ public:
     
         lazy_terminal_iterator(
                 lid_t first_display_lid,
-                coffset_t term_y_sze,
                 coffset_t cur_y_pos,
+                coffset_t term_y_sze,
                 bool iterte,
                 line_cache_type* lne_cache
         ) noexcept
                 : cur_lid_(first_display_lid)
-                , term_y_sze_(term_y_sze)
                 , cur_y_pos_(cur_y_pos)
+                , term_y_sze_(term_y_sze)
                 , iterte_(iterte)
                 , lne_cache_(lne_cache)
         {
@@ -348,9 +352,9 @@ public:
     protected:
         lid_t cur_lid_;
         
-        coffset_t term_y_sze_;
-        
         coffset_t cur_y_pos_;
+    
+        coffset_t term_y_sze_;
         
         bool iterte_;
         
@@ -361,14 +365,15 @@ public:
             : eid_(cur_eid_)
             , first_lid_(EMPTY)
             , cur_lid_(EMPTY)
-            , term_y_sze_(0)
-            , term_x_sze_(0)
-            , first_display_lid_(EMPTY)
-            , first_display_ch_(0)
-            , cursor_pos_({0, 0})
             , n_lnes_(1)
             , newl_format_(newl_format)
+            , cursor_pos_({0, 0})
+            , term_y_sze_(0)
+            , term_x_sze_(0)
+            , first_term_it_lid_(EMPTY)
+            , first_display_ch_(0)
             , iterte_in_lazy_term_it_(true)
+            , last_term_it_lnes_len_()
             , cb_cache_(cur_eid_)
             , lne_cache_(&cb_cache_, this)
     {
@@ -377,7 +382,7 @@ public:
         auto it_lne = lne_cache_.insert_first_line();
         cur_lid_ = it_lne->get_lid();
         first_lid_ = cur_lid_;
-        first_display_lid_ = cur_lid_;
+        first_term_it_lid_ = cur_lid_;
     }
     
     inline iterator begin() noexcept
@@ -387,17 +392,15 @@ public:
     
     inline terminal_iterator begin_terminal() noexcept
     {
-        iterte_in_lazy_term_it_ = false;
-        
-        return terminal_iterator(first_display_lid_, term_y_sze_, &lne_cache_);
+        return terminal_iterator(first_term_it_lid_, term_y_sze_, &lne_cache_);
     }
     
     inline lazy_terminal_iterator begin_lazy_terminal() noexcept
     {
         auto it = lazy_terminal_iterator(
-                first_display_lid_,
-                term_y_sze_,
+                cur_lid_,
                 cursor_pos_.coffset,
+                term_y_sze_,
                 iterte_in_lazy_term_it_,
                 &lne_cache_);
     
@@ -465,25 +468,9 @@ public:
         }
     }
     
-    void set_terminal_size(coffset_t term_y_sze, loffset_t term_x_sze)
+    eid_t get_eid() const noexcept
     {
-        term_y_sze_ = term_y_sze;
-        term_x_sze_ = term_x_sze;
-    }
-    
-    coffset_t get_term_y_sze() const noexcept
-    {
-        return term_y_sze_;
-    }
-    
-    loffset_t get_term_x_sze() const noexcept
-    {
-        return term_x_sze_;
-    }
-    
-    loffset_t get_first_display_character() const noexcept
-    {
-        return first_display_ch_;
+        return eid_;
     }
     
     const cursor_position& get_cursor_position() const noexcept
@@ -491,11 +478,37 @@ public:
         return cursor_pos_;
     }
     
-    eid_t get_eid() const noexcept
+    coffset_t get_terminal_y_size() const noexcept
     {
-        return eid_;
+        return term_y_sze_;
     }
-
+    
+    loffset_t get_terminal_x_size() const noexcept
+    {
+        return term_x_sze_;
+    }
+    
+    void set_terminal_size(coffset_t term_y_sze, loffset_t term_x_sze)
+    {
+        if (term_y_sze > last_term_it_lnes_len_.size())
+        {
+            last_term_it_lnes_len_.resize(term_y_sze, 0);
+        }
+        
+        term_y_sze_ = term_y_sze;
+        term_x_sze_ = term_x_sze;
+    }
+    
+    loffset_t get_first_display_character() const noexcept
+    {
+        return first_display_ch_;
+    }
+    
+    vector_type<loffset_t>& get_last_terminal_iteration_lines_length() noexcept
+    {
+        return last_term_it_lnes_len_;
+    }
+    
 private:
     bool handle_newline()
     {
@@ -526,9 +539,9 @@ private:
             
             previous_lne.merge_with_next_line();
             
-            if (first_display_lid_ == cur_lid_)
+            if (first_term_it_lid_ == cur_lid_)
             {
-                first_display_lid_ = prev_lid;
+                first_term_it_lid_ = prev_lid;
             }
             cur_lid_ = prev_lid;
             
@@ -601,8 +614,9 @@ private:
             }
             else
             {
-                line_type& first_display_lne = lne_cache_.get_line(first_display_lid_);
-                first_display_lid_ = first_display_lne.get_previous();
+                line_type& first_display_lne = lne_cache_.get_line(first_term_it_lid_);
+                first_term_it_lid_ = first_display_lne.get_previous();
+                iterte_in_lazy_term_it_ = true;
             }
             
             return true;
@@ -627,8 +641,9 @@ private:
             }
             else
             {
-                line_type& first_display_lne = lne_cache_.get_line(first_display_lid_);
-                first_display_lid_ = first_display_lne.get_next();
+                line_type& first_display_lne = lne_cache_.get_line(first_term_it_lid_);
+                first_term_it_lid_ = first_display_lne.get_next();
+                iterte_in_lazy_term_it_ = true;
             }
             
             return true;
@@ -664,21 +679,26 @@ private:
     
     lid_t cur_lid_;
     
-    coffset_t term_y_sze_;
-    
-    loffset_t term_x_sze_;
-    
-    lid_t first_display_lid_;
-    
-    loffset_t first_display_ch_;
-    
-    cursor_position cursor_pos_;
-    
     std::size_t n_lnes_;
     
     newline_format newl_format_;
     
+    cursor_position cursor_pos_;
+    
+    coffset_t term_y_sze_;
+    
+    loffset_t term_x_sze_;
+    
+    lid_t first_term_it_lid_;
+    
+    lid_t first_lazy_term_it_lid_;
+    
+    // todo : update this value.
+    loffset_t first_display_ch_;
+    
     bool iterte_in_lazy_term_it_;
+    
+    vector_type<loffset_t> last_term_it_lnes_len_;
     
     characters_buffer_cache_type cb_cache_;
     

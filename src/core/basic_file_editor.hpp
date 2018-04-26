@@ -104,7 +104,6 @@ public:
             TpAllocator
     >;
     
-    /** Class that represents a sequence container. */
     template<typename T>
     using vector_type = std::vector<T, allocator_type<T>>;
     
@@ -124,10 +123,10 @@ public:
         }
     
         iterator(
-                node_type cur_lid,
+                node_type first_lid,
                 line_cache_type* lne_cache
         ) noexcept
-                : cur_lid_(cur_lid)
+                : cur_lid_(first_lid)
                 , lne_cache_(lne_cache)
         {
         }
@@ -186,11 +185,11 @@ public:
         }
     
         terminal_iterator(
-                lid_t first_display_lid,
+                lid_t first_lid,
                 coffset_t term_y_sze,
                 line_cache_type* lne_cache
         ) noexcept
-                : cur_lid_(first_display_lid)
+                : cur_lid_(first_lid)
                 , term_y_sze_(term_y_sze)
                 , cur_y_pos_(0)
                 , lne_cache_(lne_cache)
@@ -273,21 +272,23 @@ public:
                 , term_y_sze_(0)
                 , cur_y_pos_(0)
                 , iterte_(false)
+                , last_printd_(false)
                 , lne_cache_(nullptr)
         {
         }
-    
+        
         lazy_terminal_iterator(
-                lid_t first_display_lid,
+                lid_t first_lid,
                 coffset_t cur_y_pos,
                 coffset_t term_y_sze,
                 bool iterte,
                 line_cache_type* lne_cache
         ) noexcept
-                : cur_lid_(first_display_lid)
+                : cur_lid_(first_lid)
                 , cur_y_pos_(cur_y_pos)
                 , term_y_sze_(term_y_sze)
                 , iterte_(iterte)
+                , last_printd_(false)
                 , lne_cache_(lne_cache)
         {
         }
@@ -301,7 +302,24 @@ public:
             else
             {
                 line_type& cur_lne = lne_cache_->get_line(cur_lid_);
-                cur_lid_ = cur_lne.get_next();
+                lid_t nxt_lid = cur_lne.get_next();
+    
+                if (nxt_lid == EMPTY)
+                {
+                    if (last_printd_)
+                    {
+                        cur_lid_ = nxt_lid;
+                    }
+                    else
+                    {
+                        last_printd_ = true;
+                    }
+                }
+                else
+                {
+                    cur_lid_ = nxt_lid;
+                }
+                
                 ++cur_y_pos_;
             }
             
@@ -336,12 +354,38 @@ public:
         
         line_type& operator *() noexcept override
         {
-            return lne_cache_->get_line(cur_lid_);
+            static auto last_lne_eraser = lne_cache_->insert_first_line();
+            
+            if (!last_printd_)
+            {
+                line_type& lne = lne_cache_->get_line(cur_lid_);
+                lne.set_current_y_position(cur_y_pos_);
+    
+                return lne;
+            }
+            else
+            {
+                last_lne_eraser->set_current_y_position(cur_y_pos_);
+                return *last_lne_eraser;
+            }
         }
         
         line_type* operator ->() noexcept override
         {
-            return &lne_cache_->get_line(cur_lid_);
+            static auto last_lne_eraser = lne_cache_->insert_first_line();
+    
+            if (!last_printd_)
+            {
+                line_type& lne = lne_cache_->get_line(cur_lid_);
+                lne.set_current_y_position(cur_y_pos_);
+    
+                return &lne;
+            }
+            else
+            {
+                last_lne_eraser->set_current_y_position(cur_y_pos_);
+                return &(*last_lne_eraser);
+            }
         }
     
         coffset_t get_current_y_position() const noexcept
@@ -358,6 +402,8 @@ public:
         
         bool iterte_;
         
+        bool last_printd_;
+        
         line_cache_type* lne_cache_;
     };
     
@@ -370,10 +416,12 @@ public:
             , cursor_pos_({0, 0})
             , term_y_sze_(0)
             , term_x_sze_(0)
-            , first_term_it_lid_(EMPTY)
-            , first_display_ch_(0)
-            , iterte_in_lazy_term_it_(true)
-            , last_term_it_lnes_len_()
+            , first_term_lid_(EMPTY)
+            , first_lazy_term_lid_(EMPTY)
+            , first_lazy_term_pos_({0, 0})
+            , first_term_loffset_(0)
+            , iterte_in_lazy_term_(true)
+            , term_lnes_len_()
             , cb_cache_(cur_eid_)
             , lne_cache_(&cb_cache_, this)
     {
@@ -382,7 +430,8 @@ public:
         auto it_lne = lne_cache_.insert_first_line();
         cur_lid_ = it_lne->get_lid();
         first_lid_ = cur_lid_;
-        first_term_it_lid_ = cur_lid_;
+        first_term_lid_ = cur_lid_;
+        first_lazy_term_lid_ = cur_lid_;
     }
     
     inline iterator begin() noexcept
@@ -392,19 +441,26 @@ public:
     
     inline terminal_iterator begin_terminal() noexcept
     {
-        return terminal_iterator(first_term_it_lid_, term_y_sze_, &lne_cache_);
+        return terminal_iterator(first_term_lid_, term_y_sze_, &lne_cache_);
     }
     
     inline lazy_terminal_iterator begin_lazy_terminal() noexcept
     {
+        if (first_lazy_term_lid_ == EMPTY)
+        {
+            reset_first_lazy_terminal_position();
+            iterte_in_lazy_term_ = true;
+        }
+        
         auto it = lazy_terminal_iterator(
-                cur_lid_,
-                cursor_pos_.coffset,
+                first_lazy_term_lid_,
+                first_lazy_term_pos_.coffset,
                 term_y_sze_,
-                iterte_in_lazy_term_it_,
+                iterte_in_lazy_term_,
                 &lne_cache_);
     
-        iterte_in_lazy_term_it_ = false;
+        first_lazy_term_lid_ = EMPTY;
+        iterte_in_lazy_term_ = false;
         
         return it;
     }
@@ -464,6 +520,9 @@ public:
         {
             line_type& current_lne = lne_cache_.get_line(cur_lid_);
             current_lne.insert_character(ch, cursor_pos_.loffset);
+    
+            update_first_lazy_terminal_position();
+            
             ++cursor_pos_.loffset;
         }
     }
@@ -490,32 +549,40 @@ public:
     
     void set_terminal_size(coffset_t term_y_sze, loffset_t term_x_sze)
     {
-        if (term_y_sze > last_term_it_lnes_len_.size())
+        if (term_y_sze > term_lnes_len_.size())
         {
-            last_term_it_lnes_len_.resize(term_y_sze, 0);
+            term_lnes_len_.resize(term_y_sze, 0);
         }
         
         term_y_sze_ = term_y_sze;
         term_x_sze_ = term_x_sze;
     }
     
-    loffset_t get_first_display_character() const noexcept
+    loffset_t get_first_terminal_loffset() const noexcept
     {
-        return first_display_ch_;
+        return first_term_loffset_;
     }
     
-    vector_type<loffset_t>& get_last_terminal_iteration_lines_length() noexcept
+    cursor_position& get_first_lazy_terminal_position() noexcept
     {
-        return last_term_it_lnes_len_;
+        return first_lazy_term_pos_;
+    }
+    
+    vector_type<loffset_t>& get_terminal_lines_length() noexcept
+    {
+        return term_lnes_len_;
     }
     
 private:
     bool handle_newline()
     {
         lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
+    
+        update_first_lazy_terminal_position();
+        iterte_in_lazy_term_ = true;
+        
         handle_go_down();
         handle_home();
-        iterte_in_lazy_term_it_ = true;
         
         return true;
     }
@@ -529,19 +596,20 @@ private:
         {
             --cursor_pos_.loffset;
             current_lne.erase_character(cursor_pos_.loffset);
+            update_first_lazy_terminal_position();
             
             return true;
         }
         else if (prev_lid != EMPTY)
         {
-            line_type& previous_lne = lne_cache_.get_line(prev_lid);
-            auto prev_lne_length = previous_lne.get_line_length();
+            line_type& prev_lne = lne_cache_.get_line(prev_lid);
+            auto prev_lne_len = prev_lne.get_line_length();
             
-            previous_lne.merge_with_next_line();
+            prev_lne.merge_with_next_line();
             
-            if (first_term_it_lid_ == cur_lid_)
+            if (first_term_lid_ == cur_lid_)
             {
-                first_term_it_lid_ = prev_lid;
+                first_term_lid_ = prev_lid;
             }
             cur_lid_ = prev_lid;
             
@@ -550,9 +618,18 @@ private:
             {
                 --cursor_pos_.coffset;
             }
-            cursor_pos_.loffset = prev_lne_length;
+            // todo : When the line is bigger than the terminal length it doesn't work.
+            cursor_pos_.loffset = prev_lne_len;
     
-            iterte_in_lazy_term_it_ = true;
+            if (first_term_lid_ == cur_lid_)
+            {
+                reset_first_lazy_terminal_position();
+            }
+            else
+            {
+                update_first_lazy_terminal_position();
+            }
+            iterte_in_lazy_term_ = true;
             
             return true;
         }
@@ -562,9 +639,9 @@ private:
     
     bool handle_go_left()
     {
-        line_type& current_lne = lne_cache_.get_line(cur_lid_);
+        line_type& cur_lne = lne_cache_.get_line(cur_lid_);
         
-        if (current_lne.can_go_left(cursor_pos_.loffset))
+        if (cur_lne.can_go_left(cursor_pos_.loffset))
         {
             --cursor_pos_.loffset;
             return true;
@@ -579,9 +656,9 @@ private:
     
     bool handle_go_right()
     {
-        line_type& current_lne = lne_cache_.get_line(cur_lid_);
+        line_type& cur_lne = lne_cache_.get_line(cur_lid_);
         
-        if (current_lne.can_go_right(cursor_pos_.loffset))
+        if (cur_lne.can_go_right(cursor_pos_.loffset))
         {
             ++cursor_pos_.loffset;
             return true;
@@ -600,8 +677,8 @@ private:
     
     bool handle_go_up()
     {
-        line_type& current_lne = lne_cache_.get_line(cur_lid_);
-        lid_t prev_lid = current_lne.get_previous();
+        line_type& cur_lne = lne_cache_.get_line(cur_lid_);
+        lid_t prev_lid = cur_lne.get_previous();
     
         if (prev_lid != EMPTY)
         {
@@ -614,9 +691,10 @@ private:
             }
             else
             {
-                line_type& first_display_lne = lne_cache_.get_line(first_term_it_lid_);
-                first_term_it_lid_ = first_display_lne.get_previous();
-                iterte_in_lazy_term_it_ = true;
+                line_type& first_display_lne = lne_cache_.get_line(first_term_lid_);
+                first_term_lid_ = first_display_lne.get_previous();
+                reset_first_lazy_terminal_position();
+                iterte_in_lazy_term_ = true;
             }
             
             return true;
@@ -641,9 +719,10 @@ private:
             }
             else
             {
-                line_type& first_display_lne = lne_cache_.get_line(first_term_it_lid_);
-                first_term_it_lid_ = first_display_lne.get_next();
-                iterte_in_lazy_term_it_ = true;
+                line_type& first_display_lne = lne_cache_.get_line(first_term_lid_);
+                first_term_lid_ = first_display_lne.get_next();
+                reset_first_lazy_terminal_position();
+                iterte_in_lazy_term_ = true;
             }
             
             return true;
@@ -671,6 +750,27 @@ private:
         
         return done;
     }
+    
+    void update_first_lazy_terminal_position()
+    {
+        if (first_lazy_term_lid_ == EMPTY || cursor_pos_.coffset < first_lazy_term_pos_.coffset)
+        {
+            first_lazy_term_pos_.coffset = cursor_pos_.coffset;
+            first_lazy_term_pos_.loffset = cursor_pos_.loffset;
+            first_lazy_term_lid_ = cur_lid_;
+        }
+        else if (cursor_pos_.coffset == first_lazy_term_pos_.coffset &&
+                 cursor_pos_.loffset < first_lazy_term_pos_.loffset)
+        {
+            first_lazy_term_pos_.loffset = cursor_pos_.loffset;
+        }
+    }
+    
+    void reset_first_lazy_terminal_position()
+    {
+        first_lazy_term_lid_ = first_term_lid_;
+        first_lazy_term_pos_ = {0, 0};
+    };
 
 private:
     eid_t eid_;
@@ -689,16 +789,18 @@ private:
     
     loffset_t term_x_sze_;
     
-    lid_t first_term_it_lid_;
+    lid_t first_term_lid_;
     
-    lid_t first_lazy_term_it_lid_;
+    lid_t first_lazy_term_lid_;
+    
+    cursor_position first_lazy_term_pos_;
+    
+    bool iterte_in_lazy_term_;
     
     // todo : update this value.
-    loffset_t first_display_ch_;
+    loffset_t first_term_loffset_;
     
-    bool iterte_in_lazy_term_it_;
-    
-    vector_type<loffset_t> last_term_it_lnes_len_;
+    vector_type<loffset_t> term_lnes_len_;
     
     characters_buffer_cache_type cb_cache_;
     

@@ -147,7 +147,6 @@ public:
             TpAllocator
     >;
     
-    /** Class that represents a sequence container. */
     template<typename T>
     using vector_type = std::vector<T, allocator_type<T>>;
     
@@ -269,7 +268,7 @@ public:
         {
             char_type cur_ch;
     
-            if (lne_->get_n_chars() == 0 || (cur_ch = (*lne_)[0], cur_ch == LF) || cur_ch ==  CR)
+            if (lne_->get_n_characters() == 0 || (cur_ch = (*lne_)[0], cur_ch == LF) || cur_ch ==  CR)
             {
                 reset_iterator();
             }
@@ -367,30 +366,39 @@ public:
                 : lne_(nullptr)
                 , lne_len_(0)
                 , cur_loffset_(0)
-                , limit_loffset_(0)
+                , cur_x_pos_(0)
                 , term_x_sze_(0)
+                , len_printed_(0)
                 , last_len_printed_(nullptr)
         {
         }
     
         lazy_terminal_iterator(
                 line_type* lne,
-                loffset_t first_display_character,
+                loffset_t first_loffset,
+                loffset_t cur_x_pos,
                 loffset_t term_x_sze,
                 loffset_t* last_len_printed_
         ) noexcept
                 : lne_(lne)
                 , lne_len_(lne->get_line_length())
-                , cur_loffset_(first_display_character)
-                , limit_loffset_(term_x_sze + first_display_character - 1)
+                , cur_loffset_(first_loffset)
+                , cur_x_pos_(cur_x_pos)
                 , term_x_sze_(term_x_sze)
+                , len_printed_()
                 , last_len_printed_(last_len_printed_)
         {
-            char_type cur_ch;
-    
-            if ((lne_len_ == 0 || (cur_ch = (*lne_)[0], cur_ch == LF) || cur_ch ==  CR) &&
-                *last_len_printed_ == 0)
+            len_printed_ = lne_len_ - (cur_loffset_ - cur_x_pos_);
+            if (len_printed_ > term_x_sze)
             {
+                len_printed_ = term_x_sze;
+            }
+            
+            if ((cur_loffset_ >= lne_len_ &&
+                 cur_x_pos_ >= *last_len_printed_) ||
+                cur_x_pos_ >= term_x_sze_)
+            {
+                *last_len_printed_ = len_printed_;
                 reset_iterator();
             }
         }
@@ -398,15 +406,16 @@ public:
         lazy_terminal_iterator& operator ++() noexcept override
         {
             if ((cur_loffset_ + 1 >= lne_len_ &&
-                 get_current_x_position() + 1 >= *last_len_printed_) ||
-                cur_loffset_ >= limit_loffset_)
+                 cur_x_pos_ + 1 >= *last_len_printed_) ||
+                cur_x_pos_ + 1 >= term_x_sze_)
             {
-                *last_len_printed_ = get_current_x_position() + 1;
+                *last_len_printed_ = len_printed_;
                 reset_iterator();
             }
             else
             {
                 ++cur_loffset_;
+                ++cur_x_pos_;
             }
             
             return *this;
@@ -422,8 +431,9 @@ public:
             return lne_ == rhs.lne_ &&
                    lne_len_ == rhs.lne_len_ &&
                    cur_loffset_ == rhs.cur_loffset_ &&
-                   limit_loffset_ == rhs.limit_loffset_ &&
+                   cur_x_pos_ == rhs.cur_x_pos_ &&
                    term_x_sze_ == rhs.term_x_sze_ &&
+                   len_printed_ == rhs.len_printed_ &&
                    last_len_printed_ == rhs.last_len_printed_;
         }
         
@@ -432,14 +442,15 @@ public:
             return lne_ == nullptr &&
                    lne_len_ == 0 &&
                    cur_loffset_ == 0 &&
-                   limit_loffset_ == 0 &&
+                   cur_x_pos_ == 0 &&
                    term_x_sze_ == 0 &&
+                   len_printed_ == 0 &&
                    last_len_printed_ == nullptr;
         }
         
         char_type& operator *() noexcept override
         {
-            static char_type blank = 0x20; // hgkhjfgjhkgdfhkjhkjkjhfdg
+            static char_type blank = 0x20;
     
             if (out_of_line() && less_than_last_length_printed())
             {
@@ -451,7 +462,7 @@ public:
         
         char_type* operator ->() noexcept override
         {
-            static char_type blank = 0x20; // hgjkhgjkhjghjghjg
+            static char_type blank = 0x20;
     
             if (out_of_line() && less_than_last_length_printed())
             {
@@ -460,10 +471,10 @@ public:
             
             return &(*lne_)[cur_loffset_];
         }
-        
+    
         coffset_t get_current_x_position() const noexcept
         {
-            return term_x_sze_ - (limit_loffset_ + 1 - cur_loffset_);
+            return cur_x_pos_;
         }
 
     protected:
@@ -474,7 +485,7 @@ public:
         
         bool less_than_last_length_printed() const noexcept
         {
-            return get_current_x_position() < *last_len_printed_;
+            return cur_x_pos_ < *last_len_printed_;
         }
         
         void reset_iterator()
@@ -482,8 +493,9 @@ public:
             lne_ = nullptr;
             lne_len_ = 0;
             cur_loffset_ = 0;
-            limit_loffset_ = 0;
+            cur_x_pos_ = 0;
             term_x_sze_ = 0;
+            len_printed_ = 0;
             last_len_printed_ = nullptr;
         }
     
@@ -491,12 +503,14 @@ public:
         line_type* lne_;
         
         loffset_t lne_len_;
-        
+    
         loffset_t cur_loffset_;
         
-        loffset_t limit_loffset_;
+        loffset_t cur_x_pos_;
     
         loffset_t term_x_sze_;
+        
+        loffset_t len_printed_;
         
         loffset_t* last_len_printed_;
     };
@@ -508,7 +522,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , last_len_printed_(0)
+            , cur_y_pos_(0)
             , cb_cache_(nullptr)
             , lne_cache_(nullptr)
             , file_editr_(nullptr)
@@ -527,7 +541,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , last_len_printed_(0)
+            , cur_y_pos_(0)
             , cb_cache_(cb_cache)
             , lne_cache_(lne_cache)
             , file_editr_(file_editr)
@@ -549,7 +563,7 @@ public:
             , cbid_(EMPTY)
             , cboffset_(0)
             , n_chars_(0)
-            , last_len_printed_(0)
+            , cur_y_pos_(0)
             , cb_cache_(cb_cache)
             , lne_cache_(lne_cache)
             , file_editr_(file_editr)
@@ -595,7 +609,7 @@ public:
         ifs.read((char*)&cbid_, sizeof(cbid_));
         ifs.read((char*)&cboffset_, sizeof(cboffset_));
         ifs.read((char*)&n_chars_, sizeof(n_chars_));
-        ifs.read((char*)&last_len_printed_, sizeof(last_len_printed_));
+        ifs.read((char*)&cur_y_pos_, sizeof(cur_y_pos_));
         
         ifs.close();
     }
@@ -615,11 +629,25 @@ public:
     
     inline lazy_terminal_iterator begin_lazy_terminal() noexcept
     {
-        return lazy_terminal_iterator(
+        //line_type* lne, OK
+        //loffset_t first_loffset, OK
+        //loffset_t cur_x_pos, OK
+        //loffset_t term_x_sze, OK
+        //loffset_t* last_len_printed_ OK
+    
+        auto& first_lazy_term_pos = file_editr_->get_first_lazy_terminal_position();
+        
+        auto it = lazy_terminal_iterator(
                 this,
-                file_editr_->get_first_display_character(),
-                file_editr_->get_term_x_sze(),
-                &last_len_printed_);
+                file_editr_->get_first_terminal_loffset() +
+                        first_lazy_term_pos.loffset,
+                first_lazy_term_pos.loffset,
+                file_editr_->get_terminal_x_size(),
+                &file_editr_->get_terminal_lines_length()[cur_y_pos_]);
+    
+        first_lazy_term_pos.loffset = 0;
+        
+        return it;
     }
     
     inline iterator end() noexcept
@@ -965,7 +993,7 @@ public:
         ofs.write((char*)&cbid_, sizeof(cbid_));
         ofs.write((char*)&cboffset_, sizeof(cboffset_));
         ofs.write((char*)&n_chars_, sizeof(n_chars_));
-        ofs.write((char*)&last_len_printed_, sizeof(last_len_printed_));
+        ofs.write((char*)&cur_y_pos_, sizeof(cur_y_pos_));
         
         ofs.close();
     }
@@ -1007,9 +1035,19 @@ public:
         return cboffset_;
     }
     
-    loffset_t get_n_chars() const
+    loffset_t get_n_characters() const
     {
         return n_chars_;
+    }
+    
+    void set_current_y_position(loffset_t cur_y_pos) noexcept
+    {
+        cur_y_pos_ = cur_y_pos;
+    }
+    
+    file_editor_type* get_file_editor() const
+    {
+        return file_editr_;
     }
 
 private:
@@ -1071,8 +1109,6 @@ private:
     
     loffset_t n_chars_;
     
-    // HERE : seteas esto desde el constructor de basic_file y entonces sabes donde indexarte en el
-    // vector de las antiguas longitudes de lineas, y también podrás actualizarlo.
     loffset_t cur_y_pos_;
     
     character_buffer_cache_type* cb_cache_;

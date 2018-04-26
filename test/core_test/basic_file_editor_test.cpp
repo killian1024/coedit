@@ -40,15 +40,27 @@ TEST(basic_file_editor, handle_command)
 }
 
 
-TEST(basic_file_editor, handle_newline)
+TEST(basic_file_editor, handle_newline_1)
 {
     cc::file_editor file_editr(cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
+    
+    file_editr.set_terminal_size(4, 80);
     
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
@@ -56,20 +68,65 @@ TEST(basic_file_editor, handle_newline)
     file_editr.insert_character(data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_UP));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::HOME));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_RIGHT));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
     file_editr.insert_character(data++);
     file_editr.insert_character(data++);
     
     std::size_t n_lnes = 0;
-    for (auto& lne : file_editr)
+    for (auto lne = file_editr.begin_lazy_terminal();
+         lne != file_editr.end_lazy_terminal();
+         ++lne)
     {
         ++n_lnes;
-        for (auto& ch : lne)
+        for (auto ch = lne->begin_lazy_terminal();
+             ch != lne->end_lazy_terminal();
+             ++ch)
         {
+            *ch;
         }
     }
     
     EXPECT_TRUE(n_lnes == 3);
+}
+
+
+TEST(basic_file_editor, handle_newline_2)
+{
+    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor::char_type data = 65;
+    
+    file_editr.set_terminal_size(4, 80);
+    
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    file_editr.insert_character(data++);
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
+    EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
+    
+    std::size_t n_cols = 0;
+    bool found = false;
+    
+    for (auto lne = file_editr.begin_lazy_terminal();
+         lne != file_editr.end_lazy_terminal();
+         ++lne)
+    {
+        for (auto ch = lne->begin_lazy_terminal();
+             ch != lne->end_lazy_terminal();
+             ++ch)
+        {
+            ++n_cols;
+            
+            if (n_cols == 4)
+            {
+                found = true;
+            }
+        }
+    }
+    
+    EXPECT_TRUE(found);
 }
 
 

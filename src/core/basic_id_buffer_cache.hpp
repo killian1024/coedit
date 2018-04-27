@@ -46,7 +46,7 @@ public:
     
     using const_iterator = typename cache_type::const_iterator;
     
-    basic_id_buffer_cache(eid_t eid, std::string file_id)
+    basic_id_buffer_cache(eid_t eid, std::string file_id) noexcept
             : cche_()
             , eid_(eid)
             , file_id_(std::move(file_id))
@@ -54,7 +54,7 @@ public:
     {
     }
     
-    ~basic_id_buffer_cache() noexcept
+    ~basic_id_buffer_cache()
     {
         if (swap_usd_)
         {
@@ -121,22 +121,22 @@ public:
         return cche_.cend();
     }
     
-    void lock(const_iterator& it) noexcept
+    inline void lock(const_iterator& it) noexcept
     {
         cche_.lock(it);
     }
     
-    void lock(idbid_t idbid)
+    inline void lock(idbid_t idbid) noexcept
     {
         cche_.lock(idbid);
     }
     
-    void unlock(const_iterator& it) noexcept
+    inline void unlock(const_iterator& it) noexcept
     {
         cche_.unlock(it);
     }
     
-    void unlock(idbid_t idbid)
+    inline void unlock(idbid_t idbid) noexcept
     {
         cche_.unlock(idbid);
     }
@@ -208,22 +208,22 @@ public:
     }
 
 private:
-    inline idbid_t get_buffer_target(std::size_t id)
+    inline idbid_t get_buffer_target(std::size_t id) const noexcept
     {
         return id / (ID_BUFFER_SIZE * 8);
     }
     
-    inline idboffset_t get_byte_target(std::size_t id)
+    inline idboffset_t get_byte_target(std::size_t id) const noexcept
     {
         return static_cast<std::uint32_t>((id / 8) % ID_BUFFER_SIZE);
     }
     
-    inline std::uint8_t get_bit_target(std::size_t id)
+    inline std::uint8_t get_bit_target(std::size_t id) const noexcept
     {
         return static_cast<std::uint8_t>(id % 8);
     }
     
-    stdfs::path get_id_buffer_base_path()
+    stdfs::path get_id_buffer_base_path() const
     {
         stdfs::path idb_path = ".";
         
@@ -238,7 +238,7 @@ private:
         return idb_path;
     }
     
-    stdfs::path get_id_buffer_path(idbid_t idbid)
+    stdfs::path get_id_buffer_path(idbid_t idbid) const
     {
         stdfs::path idb_path = get_id_buffer_base_path();
         

@@ -14,6 +14,17 @@ namespace core {
 
 struct cursor_position
 {
+    inline bool operator ==(const cursor_position& rhs) const noexcept
+    {
+        return loffset == rhs.loffset &&
+               coffset == rhs.coffset;
+    }
+    
+    inline bool operator !=(const cursor_position& rhs) const noexcept
+    {
+        return !(rhs == *this);
+    }
+    
     loffset_t loffset;
     coffset_t coffset;
 };

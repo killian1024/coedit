@@ -117,7 +117,7 @@ public:
     
     using const_iterator = typename line_cache_type::const_iterator;
     
-    basic_line_cache(character_buffer_cache_type* cb_cache, file_editor_type* file_editr)
+    basic_line_cache(character_buffer_cache_type* cb_cache, file_editor_type* file_editr) noexcept
             : cb_cache_(cb_cache)
             , lne_cache_()
             , lidb_cache_(file_editr->get_eid(), "lidb")
@@ -127,7 +127,7 @@ public:
     {
     }
     
-    ~basic_line_cache() noexcept
+    ~basic_line_cache()
     {
         if (swap_usd_)
         {
@@ -196,22 +196,22 @@ public:
         return lne_cache_.cend();
     }
     
-    void lock(const_iterator& it) noexcept
+    inline void lock(const_iterator& it) noexcept
     {
         lne_cache_.lock(it);
     }
     
-    void lock(cbid_t cbid) noexcept
+    inline void lock(cbid_t cbid) noexcept
     {
         lne_cache_.lock(cbid);
     }
     
-    void unlock(const_iterator& it) noexcept
+    inline void unlock(const_iterator& it) noexcept
     {
         lne_cache_.unlock(it);
     }
     
-    void unlock(cbid_t cbid) noexcept
+    inline void unlock(cbid_t cbid) noexcept
     {
         lne_cache_.unlock(cbid);
     }
@@ -361,7 +361,7 @@ private:
         return lne_cache_.insert(lid, std::forward<TpValue_>(val));
     }
     
-    stdfs::path get_line_base_path()
+    stdfs::path get_line_base_path() const
     {
         stdfs::path lne_path = ".";
         
@@ -374,7 +374,7 @@ private:
         return lne_path;
     }
     
-    stdfs::path get_line_path(lid_t lid)
+    stdfs::path get_line_path(lid_t lid) const
     {
         stdfs::path lne_path = get_line_base_path();
         lne_path.concat(std::to_string(lid));

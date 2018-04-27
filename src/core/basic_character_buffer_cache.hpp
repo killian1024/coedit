@@ -75,7 +75,7 @@ public:
     
     using const_iterator = typename character_buffer_cache_type::const_iterator;
     
-    basic_character_buffer_cache(eid_t editr_id)
+    basic_character_buffer_cache(eid_t editr_id) noexcept
             : cb_cache_()
             , cbidb_cache_(editr_id, "cbidb")
             , eid_(editr_id)
@@ -84,7 +84,7 @@ public:
     {
     }
     
-    ~basic_character_buffer_cache() noexcept
+    ~basic_character_buffer_cache()
     {
         if (swap_usd_)
         {
@@ -151,22 +151,22 @@ public:
         return cb_cache_.cend();
     }
     
-    void lock(const_iterator& it) noexcept
+    inline void lock(const_iterator& it) noexcept
     {
         cb_cache_.lock(it);
     }
     
-    void lock(cbid_t cbid) noexcept
+    inline void lock(cbid_t cbid) noexcept
     {
         cb_cache_.lock(cbid);
     }
     
-    void unlock(const_iterator& it) noexcept
+    inline void unlock(const_iterator& it) noexcept
     {
         cb_cache_.unlock(it);
     }
     
-    void unlock(cbid_t cbid) noexcept
+    inline void unlock(cbid_t cbid) noexcept
     {
         cb_cache_.unlock(cbid);
     }
@@ -296,7 +296,7 @@ private:
         return cb_cache_.insert(cbid, std::forward<TpValue_>(val));
     }
     
-    stdfs::path get_character_buffer_base_path()
+    stdfs::path get_character_buffer_base_path() const
     {
         stdfs::path cb_path = ".";
         
@@ -309,7 +309,7 @@ private:
         return cb_path;
     }
     
-    stdfs::path get_character_buffer_path(cbid_t cbid)
+    inline stdfs::path get_character_buffer_path(cbid_t cbid) const
     {
         stdfs::path cb_path = get_character_buffer_base_path();
         cb_path.concat(std::to_string(cbid));
@@ -317,7 +317,7 @@ private:
         return cb_path;
     }
     
-    void store_character_buffer(character_buffer_type& cb)
+    inline void store_character_buffer(character_buffer_type& cb)
     {
         cb.store(get_character_buffer_path(cb.get_cbid()));
         swap_usd_ = true;

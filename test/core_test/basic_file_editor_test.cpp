@@ -74,13 +74,13 @@ TEST(basic_file_editor, handle_newline_1)
     file_editr.insert_character(data++);
     
     std::size_t n_lnes = 0;
-    for (auto lne = file_editr.begin_lazy_terminal();
-         lne != file_editr.end_lazy_terminal();
+    for (auto lne = file_editr.begin_terminal();
+         lne != file_editr.end_terminal();
          ++lne)
     {
         ++n_lnes;
-        for (auto ch = lne->begin_lazy_terminal();
-             ch != lne->end_lazy_terminal();
+        for (auto ch = lne->begin_terminal();
+             ch != lne->end_terminal();
              ++ch)
         {
             *ch;

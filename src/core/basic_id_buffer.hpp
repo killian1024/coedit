@@ -31,13 +31,13 @@ template<
 class basic_id_buffer
 {
 public:
-    basic_id_buffer()
+    basic_id_buffer() noexcept
             : buf_(nullptr)
             , idbid_(EMPTY)
     {
     }
     
-    basic_id_buffer(idbid_t idbid)
+    basic_id_buffer(idbid_t idbid) noexcept
             : buf_()
             , idbid_(idbid)
     {

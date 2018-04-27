@@ -90,7 +90,7 @@ public:
         kcontain::flags<operation_types> types;
     };
     
-    basic_character_buffer()
+    basic_character_buffer() noexcept
             : buf_(nullptr)
             , cbid_(EMPTY)
             , prev_(EMPTY)
@@ -393,29 +393,29 @@ public:
         ofs.close();
     }
     
-    char_type& operator [](cboffset_t i)
+    inline char_type& operator [](cboffset_t i)
     {
         character_buffer_type& cb = get_character_buffer(&i);
         
         return cb.buf_[i];
     }
     
-    cbid_t get_cbid() const
+    inline cbid_t get_cbid() const noexcept
     {
         return cbid_;
     }
     
-    cbid_t get_previous() const
+    inline cbid_t get_previous() const noexcept
     {
         return prev_;
     }
     
-    cbid_t get_next() const
+    inline cbid_t get_next() const noexcept
     {
         return nxt_;
     }
     
-    cboffset_t get_size() const
+    inline cboffset_t get_size() const noexcept
     {
         return sze_;
     }
@@ -462,7 +462,7 @@ private:
         }
     }
     
-    bool move_half_characters_to(character_buffer_type& cb_dest)
+    bool move_half_characters_to(character_buffer_type& cb_dest) noexcept
     {
         constexpr const cboffset_t half_size = CHARACTER_BUFFER_SIZE / 2;
     

@@ -15,7 +15,10 @@ set(CORE_SOURCE_FILES
         core/core_exception.hpp
         core/newline_format.hpp
         core/cursor_position.hpp
-        core/basic_id_buffer_cache.hpp core/basic_id_buffer.hpp)
+        core/basic_id_buffer_cache.hpp 
+        core/basic_id_buffer.hpp 
+        coedit_exception.hpp
+        )
 
 set(TUI_SOURCE_FILES
         tui/curses_interface.hpp

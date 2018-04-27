@@ -18,7 +18,7 @@ set(CORE_SOURCE_FILES
         core/basic_id_buffer_cache.hpp 
         core/basic_id_buffer.hpp 
         coedit_exception.hpp
-        )
+        tui/curses_colors.hpp)
 
 set(TUI_SOURCE_FILES
         tui/curses_interface.hpp

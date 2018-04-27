@@ -530,6 +530,11 @@ public:
         return eid_;
     }
     
+    inline std::size_t get_n_lines() const noexcept
+    {
+        return n_lnes_;
+    }
+    
     inline const cursor_position& get_cursor_position() const noexcept
     {
         return cursor_pos_;
@@ -562,6 +567,7 @@ private:
     bool handle_newline()
     {
         lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
+        ++n_lnes_;
     
         update_first_lazy_terminal_position_by_cursor();
         iterte_in_lazy_term_ = true;

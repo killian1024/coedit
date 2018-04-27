@@ -6,8 +6,11 @@
 #define COEDIT_TUI_CURSES_INTERFACE_HPP
 
 #include <curses.h>
+#include <iomanip>
+#include <sstream>
 
 #include "../core/basic_file_editor.hpp"
+#include "curses_colors.hpp"
 
 
 namespace coedit {
@@ -66,7 +69,7 @@ public:
             
             if (file_editr_->needs_refresh())
             {
-                print_current_text();
+                print();
                 update_cursor();
                 wrefresh(win_);
             }
@@ -113,6 +116,15 @@ private:
         {
             // Inicializar la utilización de colores.
             start_color();
+            //init_color(COLOR_LIGHT_WHITE, 1000, 1000, 1000);
+            //init_color(COLOR_BLACK, 0, 0, 0);
+            
+            init_pair(static_cast<short>(curses_color::DEFAULT),
+                      COLOR_BLACK, COLOR_LIGHT_WHITE);
+            init_pair(static_cast<short>(curses_color::LINE_NUMBER),
+                      COLOR_BLUE, COLOR_WHITE);
+            
+            wbkgd(win_, COLOR_PAIR(static_cast<short>(curses_color::DEFAULT)));
             colors_enabled_ = true;
         }
     
@@ -192,25 +204,55 @@ private:
         }
     }
     
-    void print_current_text()
+    void print()
     {
         //wclear(win_);
         std::string cur_numb;
-    
-        for (auto lne = file_editr_->begin_lazy_terminal();
-             lne != file_editr_->end_lazy_terminal();
-             ++lne)
+        std::size_t cur_n_digits;
+        std::size_t cur_n_lnes;
+        
+        for (cur_n_lnes = file_editr_->get_n_lines(), cur_n_digits = 1;
+             cur_n_lnes > 9;
+             ++cur_n_digits)
         {
-            cur_numb = std::to_string(lne->get_number());
-            mvwprintw(win_, lne.get_y_position(), 0, cur_numb.c_str());
+            cur_n_lnes /= 10;
+        }
+        if (left_margin_ < cur_n_digits + 2)
+        {
+            left_margin_ = cur_n_digits + 2;
+        }
+    
+        for (auto it_lne = file_editr_->begin_lazy_terminal();
+             it_lne != file_editr_->end_lazy_terminal();
+             ++it_lne)
+        {
+            print_line_number(it_lne);
             
-            for (auto ch = lne->begin_lazy_terminal();
-                 ch != lne->end_lazy_terminal();
-                 ++ch)
+            for (auto it_ch = it_lne->begin_lazy_terminal();
+                 it_ch != it_lne->end_lazy_terminal();
+                 ++it_ch)
             {
-                mvwprintw(win_, lne.get_y_position(), ch.get_x_position() + left_margin_,
-                          "%c", *ch);
+                mvwprintw(win_, it_lne.get_y_position(), it_ch.get_x_position() + left_margin_,
+                          "%c", *it_ch);
             }
+        }
+    }
+    
+    void print_line_number(typename file_editor_type::lazy_terminal_iterator& it_lne)
+    {
+        std::stringstream sstr_lne_numb;
+        
+        if (colors_enabled_)
+        {
+            attron(COLOR_PAIR(static_cast<short>(curses_color::LINE_NUMBER)));
+        }
+        
+        sstr_lne_numb << ' ' << std::setw(left_margin_ - 2) << it_lne->get_number();
+        mvwprintw(win_, it_lne.get_y_position(), 0, sstr_lne_numb.str().c_str());
+        
+        if (colors_enabled_)
+        {
+            attroff(COLOR_PAIR(static_cast<short>(curses_color::LINE_NUMBER)));
         }
     }
     

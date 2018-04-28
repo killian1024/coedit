@@ -12,6 +12,10 @@
 #include "../core/basic_file_editor.hpp"
 #include "curses_colors.hpp"
 
+#ifndef CTRL
+#define CTRL(c) ((c) & 037)
+#endif
+
 
 namespace coedit {
 namespace tui {
@@ -62,6 +66,13 @@ public:
     int execute()
     {
         init_curses();
+        
+        if (file_editr_->is_file_loaded())
+        {
+            print();
+            update_cursor();
+            wrefresh(win_);
+        }
     
         while (!execution_finish_)
         {
@@ -70,13 +81,10 @@ public:
             if (file_editr_->needs_refresh())
             {
                 print();
-                update_cursor();
                 wrefresh(win_);
             }
-            else
-            {
-                update_cursor();
-            }
+            
+            update_cursor();
         
             ksys::nanosleep(0, 1'000'000);
         }
@@ -198,6 +206,10 @@ private:
             
                 case KEY_END:
                     file_editr_->handle_command(core::fec_t::END);
+                    break;
+                    
+                case CTRL('s'):
+                    file_editr_->handle_command(core::fec_t::SAVE_FILE);
                     break;
             
                 default:

@@ -6,6 +6,9 @@
 #define COEDIT_CORE_BASIC_FILE_EDITOR_HPP
 
 #include <sys/user.h>
+
+#include <experimental/filesystem>
+#include <fstream>
 #include <memory>
 
 #include <kboost/kboost.hpp>
@@ -22,6 +25,9 @@
 
 namespace coedit {
 namespace core {
+
+
+namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -399,8 +405,10 @@ public:
         line_cache_type* lne_cache_;
     };
     
-    basic_file_editor(newline_format newl_format)
-            : eid_(cur_eid_)
+    basic_file_editor(stdfs::path fle_path, newline_format newl_format)
+            : fle_path_(std::move(fle_path))
+            , fle_loaded_(false)
+            , eid_(cur_eid_)
             , first_lid_(EMPTY)
             , cur_lid_(EMPTY)
             , n_lnes_(1)
@@ -425,6 +433,11 @@ public:
         first_lid_ = cur_lid_;
         first_term_lid_ = cur_lid_;
         first_lazy_term_lid_ = cur_lid_;
+        
+        if (stdfs::exists(fle_path_))
+        {
+            load_file();
+        }
     }
     
     inline iterator begin() noexcept
@@ -498,9 +511,12 @@ public:
     
             case file_editor_command::HOME:
                 return handle_home();
-    
+                
             case file_editor_command::END:
                 return handle_end();
+    
+            case file_editor_command::SAVE_FILE:
+                return save_file();
         }
     }
     
@@ -521,6 +537,11 @@ public:
         }
         
         needs_refresh_ = true;
+    }
+    
+    inline bool is_file_loaded() const noexcept
+    {
+        return fle_loaded_;
     }
     
     inline bool needs_refresh() const noexcept
@@ -567,6 +588,106 @@ public:
     }
     
 private:
+    bool load_file()
+    {
+        std::ifstream ifs;
+        char_type ch;
+        char_type prev_ch = 0;
+        line_type* cur_lne;
+        line_type* prev_lne = nullptr;
+        cursor_position prev_cursor_pos = {0, 0};
+        typename line_cache_type::iterator it_lne;
+        
+        ifs.open(fle_path_, std::ios::in | std::ios::binary);
+        
+        if (ifs)
+        {
+            cur_lne = &lne_cache_.get_line(first_lid_);
+    
+            while (ifs.read((char*)&ch, 1), !ifs.eof())
+            {
+                if (ch == LF && prev_ch == CR)
+                {
+                    prev_lne->insert_character(ch, prev_cursor_pos.loffset);
+                    prev_ch = 0;
+                }
+                else
+                {
+                    cur_lne->insert_character(ch, cursor_pos_.loffset);
+                    ++cursor_pos_.loffset;
+                    
+                    prev_cursor_pos = cursor_pos_;
+                    prev_ch = ch;
+                    prev_lne = cur_lne;
+                    
+                    if (ch == LF || ch == CR)
+                    {
+                        it_lne = lne_cache_.insert_line_after(cur_lne->get_lid());
+                        ++n_lnes_;
+                        cur_lne = &*it_lne;
+                        cursor_pos_.loffset = 0;
+                    }
+                }
+            }
+    
+            ifs.close();
+            cursor_pos_ = {0, 0};
+            fle_loaded_ = true;
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    bool save_file()
+    {
+        std::ofstream ofs;
+        char_type newl_ch;
+    
+        ofs.open(fle_path_, std::ios::out | std::ios::binary);
+        
+        if (ofs)
+        {
+            for (auto& lne : *this)
+            {
+                for (auto& ch : lne)
+                {
+                    ofs.write((const char*)&ch, 1);
+                }
+                
+                if (lne.get_next() != EMPTY)
+                {
+                    switch (newl_format_)
+                    {
+                        case newline_format::UNIX:
+                            newl_ch = LF;
+                            ofs.write((const char*)&newl_ch, 1);
+                            break;
+    
+                        case newline_format::MAC:
+                            newl_ch = CR;
+                            ofs.write((const char*)&newl_ch, 1);
+                            break;
+    
+                        case newline_format::WINDOWS:
+                            newl_ch = CR;
+                            ofs.write((const char*)&newl_ch, 1);
+                            newl_ch = LF;
+                            ofs.write((const char*)&newl_ch, 1);
+                            break;
+                    }
+                }
+            }
+            
+            ofs.close();
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
     bool handle_newline()
     {
         lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
@@ -795,8 +916,9 @@ private:
     }
 
 private:
-    // continue : implemente load & store.
     stdfs::path fle_path_;
+    
+    bool fle_loaded_;
     
     eid_t eid_;
     

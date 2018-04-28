@@ -12,7 +12,7 @@ namespace cc = coedit::core;
 
 TEST(basic_file_editor, insert_character)
 {
-    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
     file_editr.insert_character(data++);
@@ -22,7 +22,7 @@ TEST(basic_file_editor, insert_character)
 
 TEST(basic_file_editor, handle_command)
 {
-    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
     file_editr.insert_character(data++);
@@ -42,7 +42,7 @@ TEST(basic_file_editor, handle_command)
 
 TEST(basic_file_editor, handle_newline_1)
 {
-    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
     file_editr.set_terminal_size(4, 80);
@@ -93,7 +93,7 @@ TEST(basic_file_editor, handle_newline_1)
 
 TEST(basic_file_editor, handle_newline_2)
 {
-    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
     file_editr.set_terminal_size(4, 80);
@@ -132,7 +132,7 @@ TEST(basic_file_editor, handle_newline_2)
 
 TEST(basic_file_editor, handle_end)
 {
-    cc::file_editor file_editr(cc::newline_format::UNIX);
+    cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
     file_editr.insert_character(data++);
@@ -143,11 +143,30 @@ TEST(basic_file_editor, handle_end)
 }
 
 
+TEST(basic_file_editor, handle_load_file)
+{
+    cc::file_editor file_editr("./file.txt", cc::newline_format::UNIX);
+    file_editr.set_terminal_size(80, 80);
+    
+    for (auto it_lne = file_editr.begin_lazy_terminal();
+         it_lne != file_editr.end_lazy_terminal();
+         ++it_lne)
+    {
+        for (auto it_ch = it_lne->begin_lazy_terminal();
+             it_ch != it_lne->end_lazy_terminal();
+             ++it_ch)
+        {
+            *it_ch;
+        }
+    }
+}
+
+
 TEST(basic_file_editor, iterator)
 {
     using file_editor = cc::file_editor;
     
-    file_editor file_editr(cc::newline_format::UNIX);
+    file_editor file_editr("", cc::newline_format::UNIX);
     file_editor::char_type data = 48;
     
     file_editr.insert_character(data++);

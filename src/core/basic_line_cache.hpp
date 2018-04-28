@@ -284,6 +284,18 @@ public:
         return it_newline;
     }
     
+    iterator insert_line_after(lid_t lid)
+    {
+        lid_t new_lid = get_new_lid();
+        line_type& current_lne = get_line(lid);
+        iterator it_newline;
+    
+        it_newline = insert_line_in_cache(new_lid, line_type(
+                new_lid, lid, cb_cache_, this, file_editr_));
+    
+        return it_newline;
+    }
+    
     line_type& get_line(lid_t lid)
     {
         iterator it = find(lid);

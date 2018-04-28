@@ -19,7 +19,8 @@ enum class file_editor_command
     GO_UP,
     GO_DOWN,
     HOME,
-    END
+    END,
+    SAVE_FILE,
 };
 
 

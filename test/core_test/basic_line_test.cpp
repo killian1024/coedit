@@ -19,7 +19,7 @@ TEST(basic_line, constructor_with_parameters)
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
-    file_editor file_editr(cc::newline_format::UNIX);
+    file_editor file_editr("", cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
     line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     
@@ -36,7 +36,7 @@ TEST(basic_line, begin_end)
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
-    file_editor file_editr(cc::newline_format::UNIX);
+    file_editor file_editr("", cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
     line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     cc::loffset_t loffset = 0;
@@ -66,7 +66,7 @@ TEST(basic_line, insert_character)
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
-    file_editor file_editr(cc::newline_format::UNIX);
+    file_editor file_editr("", cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
     line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     cc::loffset_t loffset = 0;
@@ -113,7 +113,7 @@ TEST(basic_line, erase_character)
     using line = cc::basic_line<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     using file_editor = cc::basic_file_editor<char, 4, 8, 4, 8, 4, 4, 8, std::allocator<int>>;
     
-    file_editor file_editr(cc::newline_format::UNIX);
+    file_editor file_editr("", cc::newline_format::UNIX);
     chatacter_buffer_cache cb_cache = chatacter_buffer_cache(0);
     line_cache lne_cache = line_cache(&cb_cache, &file_editr);
     cc::loffset_t loffset = 0;
@@ -139,4 +139,3 @@ TEST(basic_line, erase_character)
     ASSERT_TRUE((*it_lne2)[1] == ch - 3);
     ASSERT_TRUE((*it_lne2)[2] == ch - 2);
 }
-

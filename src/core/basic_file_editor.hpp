@@ -342,6 +342,8 @@ public:
         line_type& operator *() noexcept override
         {
             static auto last_lne_eraser = lne_cache_->insert_first_line();
+            // todo : Deal whith this crap :)
+            last_lne_eraser->set_number(0);
             
             if (!last_printd_)
             {
@@ -361,6 +363,8 @@ public:
         line_type* operator ->() noexcept override
         {
             static auto last_lne_eraser = lne_cache_->insert_first_line();
+            // todo : Deal whith this crap :)
+            last_lne_eraser->set_number(0);
     
             if (!last_printd_)
             {
@@ -435,8 +439,6 @@ public:
     
     inline lazy_terminal_iterator begin_lazy_terminal() noexcept
     {
-        needs_refresh_ = false;
-        
         if (first_lazy_term_lid_ == EMPTY)
         {
             reset_first_lazy_terminal_position();
@@ -452,6 +454,7 @@ public:
     
         first_lazy_term_lid_ = EMPTY;
         iterte_in_lazy_term_ = false;
+        needs_refresh_ = false;
         
         return it;
     }
@@ -792,6 +795,9 @@ private:
     }
 
 private:
+    // continue : implemente load & store.
+    stdfs::path fle_path_;
+    
     eid_t eid_;
     
     lid_t first_lid_;

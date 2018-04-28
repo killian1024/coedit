@@ -106,6 +106,9 @@ private:
     
         // Hace que la entrada del teclado no aparezca en la pantalla.
         noecho();
+    
+        // Definir la espera en milisegundos realizada por curses cuando ESC es encotrado.
+        set_escdelay(100);
         
         // El cursor_offset físico estará posicionado en el mismo lugar que el cursor_offset lógico
         //  después de un refresh.
@@ -120,7 +123,7 @@ private:
             //init_color(COLOR_BLACK, 0, 0, 0);
             
             init_pair(static_cast<short>(curses_color::DEFAULT),
-                      COLOR_BLACK, COLOR_LIGHT_WHITE);
+                      COLOR_BLACK, COLOR_WHITE);
             init_pair(static_cast<short>(curses_color::LINE_NUMBER),
                       COLOR_BLUE, COLOR_WHITE);
             
@@ -156,7 +159,7 @@ private:
         {
             switch (inpt)
             {
-                case 48:
+                case 27:
                     execution_finish_ = true;
                     break;
             
@@ -241,13 +244,22 @@ private:
     void print_line_number(typename file_editor_type::lazy_terminal_iterator& it_lne)
     {
         std::stringstream sstr_lne_numb;
+        auto cur_numb = it_lne->get_number();
         
         if (colors_enabled_)
         {
             attron(COLOR_PAIR(static_cast<short>(curses_color::LINE_NUMBER)));
         }
         
-        sstr_lne_numb << ' ' << std::setw(left_margin_ - 2) << it_lne->get_number();
+        if (cur_numb > 0)
+        {
+            sstr_lne_numb << ' ' << std::setw(left_margin_ - 2) << cur_numb;
+        }
+        else
+        {
+            sstr_lne_numb << std::setw(left_margin_) << ' ';
+        }
+        
         mvwprintw(win_, it_lne.get_y_position(), 0, sstr_lne_numb.str().c_str());
         
         if (colors_enabled_)

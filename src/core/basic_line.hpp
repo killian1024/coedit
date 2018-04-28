@@ -1144,6 +1144,11 @@ private:
         return false;
     }
     
+    inline void set_number(std::size_t numb) noexcept
+    {
+        numb_ = numb;
+    }
+    
 private:
     lid_t lid_;
     

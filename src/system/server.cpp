@@ -2,6 +2,8 @@
 // Created by Killian on 29/04/18.
 //
 
+#include <kboost/kboost.hpp>
+
 #include "server.hpp"
 
 
@@ -15,6 +17,7 @@ server::server(std::uint16_t port_nbr)
         , master_sock_()
         , server_addr_()
 {
+    master_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     memset(&server_addr_, 0, sizeof(server_addr_));
     server_addr_.sin_family = AF_INET;
     server_addr_.sin_addr.s_addr = INADDR_ANY;
@@ -35,6 +38,8 @@ server::~server()
 
 int server::execute()
 {
+    std::cout << kios::set_light_green_text << "Starting coedit server" << kios::newl;
+    
     while (!execution_finish_)
     {
         add_client();
@@ -56,12 +61,15 @@ void server::add_client()
     sockaddr_in client_addr;
     socklen_t sock_len;
     
+    std::cout << kios::set_green_text << "Waiting..." << kios::newl;
     sock_len = sizeof(client_addr);
-    client_sock = accept(master_sock_, (struct sockaddr *)&client_addr, &sock_len);
+    client_sock = accept(master_sock_, (sockaddr*)&client_addr, &sock_len);
     
     if (!server_session_exists(fle_path))
     {
         sessions_.push_back(new server_session(fle_path));
+        std::cout << kios::set_light_green_text << "Adding new session in: " << fle_path << kios::newl;
+        
         sessions_.back()->add_client(client_data(client_sock, client_addr));
         sessions_.back()->execute();
     }
@@ -70,6 +78,8 @@ void server::add_client()
         server_session& serv_session = get_server_session(fle_path);
         serv_session.add_client(client_data(client_sock, client_addr));
     }
+    
+    std::cout << kios::set_light_blue_text << "Adding new client to: " << fle_path << kios::newl;
 }
 
 

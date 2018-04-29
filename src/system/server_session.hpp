@@ -54,6 +54,8 @@ public:
     
 private:
     void execute_in_thread();
+    
+    void manage_request(client_data& client_dat);
 
 private:
     stdfs::path fle_path_;

@@ -168,7 +168,6 @@ void curses_interface::print()
 {
     std::string cur_numb;
     std::size_t cur_n_digits;
-    std::size_t cur_n_lnes;
     
     update_cursor();
     
@@ -194,10 +193,10 @@ void curses_interface::print()
                           "%c", *it_ch);
             }
         }
-    }
     
-    update_cursor();
-    wrefresh(win_);
+        update_cursor();
+        wrefresh(win_);
+    }
 }
 
 

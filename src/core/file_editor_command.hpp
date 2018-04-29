@@ -10,8 +10,9 @@ namespace coedit {
 namespace core {
 
 
-enum class file_editor_command
+enum class file_editor_command : std::uint32_t
 {
+    NIL = 0,
     NEWLINE,
     BACKSPACE,
     GO_LEFT,
@@ -21,6 +22,8 @@ enum class file_editor_command
     HOME,
     END,
     SAVE_FILE,
+    EXIT,
+    MAX = 31
 };
 
 

@@ -690,8 +690,18 @@ private:
     
     bool handle_newline()
     {
+        std::size_t cur_n_digits;
+        std::size_t new_n_digits;
+        
         lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
+    
+        cur_n_digits = kscalar::get_n_digits(n_lnes_);
         ++n_lnes_;
+        new_n_digits = kscalar::get_n_digits(n_lnes_);
+        if (cur_n_digits != new_n_digits)
+        {
+            reset_first_lazy_terminal_position();
+        }
     
         update_first_lazy_terminal_position_by_cursor();
         iterte_in_lazy_term_ = true;

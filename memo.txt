@@ -1,1 +1,2 @@
 alignas(CHARACTER_BUFFER_SIZE * sizeof(char_type)) char_type buf_[CHARACTER_BUFFER_SIZE];
+wclear(win_)

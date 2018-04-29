@@ -5,14 +5,14 @@
 #ifndef COEDIT_CORE_CORE_EXCEPTION_HPP
 #define COEDIT_CORE_CORE_EXCEPTION_HPP
 
-#include "../coedit_exception.hpp"
+#include <exception>
 
 
 namespace coedit {
 namespace core {
 
 
-class core_exception : public coedit_exception
+class core_exception : public std::exception
 {
     const char* what() const noexcept override
     {

@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 #include <cstring>
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include "../core/basic_file_editor.hpp"
 #include "server_session.hpp"
@@ -27,9 +27,6 @@
 
 namespace coedit {
 namespace system {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 class server
@@ -47,9 +44,9 @@ public:
 private:
     void add_client();
     
-    bool server_session_exists(const stdfs::path& fle_path) const noexcept;
+    bool server_session_exists(const std::filesystem::path& fle_path) const noexcept;
     
-    server_session& get_server_session(const stdfs::path& fle_path);
+    server_session& get_server_session(const std::filesystem::path& fle_path);
     
 private:
     bool execution_finish_;

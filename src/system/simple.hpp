@@ -5,7 +5,7 @@
 #ifndef COEDIT_SYSTEM_SIMPLE_HPP
 #define COEDIT_SYSTEM_SIMPLE_HPP
 
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include "../core/basic_file_editor.hpp"
 #include "../tui/curses_interface.hpp"
@@ -13,9 +13,6 @@
 
 namespace coedit {
 namespace system {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 class simple
@@ -29,7 +26,7 @@ public:
     
     using interface_type = tui::curses_interface;
     
-    simple(stdfs::path fle_path);
+    simple(std::filesystem::path fle_path);
     
     int execute();
 

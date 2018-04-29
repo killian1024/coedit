@@ -7,7 +7,7 @@
 
 #include <sys/user.h>
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 
@@ -25,9 +25,6 @@
 
 namespace coedit {
 namespace core {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -228,6 +225,8 @@ public:
         terminal_iterator& operator --() noexcept override
         {
             // todo : Throw exception.
+            static terminal_iterator dummy;
+            return dummy;
         }
     
         bool operator ==(const terminal_iterator& rhs) const noexcept override
@@ -332,6 +331,8 @@ public:
         lazy_terminal_iterator& operator --() noexcept override
         {
             // todo : Throw exception.
+            static lazy_terminal_iterator dummy;
+            return dummy;
         }
         
         bool operator ==(const lazy_terminal_iterator& rhs) const noexcept override
@@ -405,7 +406,7 @@ public:
         line_cache_type* lne_cache_;
     };
     
-    basic_file_editor(stdfs::path fle_path, newline_format newl_format)
+    basic_file_editor(std::filesystem::path fle_path, newline_format newl_format)
             : fle_path_(std::move(fle_path))
             , fle_loaded_(false)
             , eid_(cur_eid_)
@@ -433,8 +434,10 @@ public:
         first_lid_ = cur_lid_;
         first_term_lid_ = cur_lid_;
         first_lazy_term_lid_ = cur_lid_;
+    
         
-        if (stdfs::exists(fle_path_))
+        
+        if (std::filesystem::exists(fle_path_))
         {
             load_file();
         }
@@ -518,6 +521,8 @@ public:
             case file_editor_command::SAVE_FILE:
                 return save_file();
         }
+        
+        return false;
     }
     
     void insert_character(char_type ch)
@@ -695,9 +700,9 @@ private:
         
         lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
     
-        cur_n_digits = kscalar::get_n_digits(n_lnes_);
+        cur_n_digits = kscalars::get_n_digits(n_lnes_);
         ++n_lnes_;
-        new_n_digits = kscalar::get_n_digits(n_lnes_);
+        new_n_digits = kscalars::get_n_digits(n_lnes_);
         if (cur_n_digits != new_n_digits)
         {
             reset_first_lazy_terminal_position();
@@ -926,7 +931,7 @@ private:
     }
 
 private:
-    stdfs::path fle_path_;
+    std::filesystem::path fle_path_;
     
     bool fle_loaded_;
     

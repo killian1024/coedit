@@ -9,7 +9,7 @@ namespace coedit {
 namespace system {
 
 
-client::client(stdfs::path fle_path)
+client::client(std::filesystem::path fle_path)
         : file_editr_(std::move(fle_path), coedit::core::newline_format::UNIX)
         , interf_(&file_editr_)
 {

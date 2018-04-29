@@ -21,9 +21,6 @@ namespace coedit {
 namespace core {
 
 
-namespace stdfs = std::experimental::filesystem;
-
-
 template<
         typename TpChar,
         std::size_t CHARACTER_BUFFER_SIZE,
@@ -291,6 +288,8 @@ public:
         terminal_iterator& operator --() noexcept override
         {
             //throw invalid_operation_exception();
+            static terminal_iterator dummy;
+            return dummy;
         }
         
         bool operator ==(const terminal_iterator& rhs) const noexcept override
@@ -416,6 +415,8 @@ public:
         lazy_terminal_iterator& operator --() noexcept override
         {
             //throw invalid_operation_exception();
+            static lazy_terminal_iterator dummy;
+            return dummy;
         }
         
         bool operator ==(const lazy_terminal_iterator& rhs) const noexcept override
@@ -588,7 +589,7 @@ public:
     }
     
     basic_line(
-            const stdfs::path& l_path,
+            const std::filesystem::path& l_path,
             character_buffer_cache_type* cb_cache,
             line_cache_type* l_cache,
             file_editor_type* file_editr
@@ -975,7 +976,7 @@ public:
         return n_chars_;
     }
     
-    void store(const stdfs::path& l_path) const
+    void store(const std::filesystem::path& l_path) const
     {
         std::ofstream ofs;
         

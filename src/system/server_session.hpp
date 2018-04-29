@@ -29,9 +29,6 @@ namespace coedit {
 namespace system {
 
 
-namespace stdfs = std::experimental::filesystem;
-
-
 class server_session
 {
 public:
@@ -42,13 +39,13 @@ public:
     template<typename T>
     using vector_type = std::vector<T>;
     
-    server_session(stdfs::path fle_path);
+    server_session(std::filesystem::path fle_path);
     
     void execute();
     
     void add_client(const client_data& client_dat);
     
-    bool is_same_path(const stdfs::path& fle_path) const noexcept;
+    bool is_same_path(const std::filesystem::path& fle_path) const noexcept;
     
     void join();
     
@@ -58,7 +55,7 @@ private:
     void manage_request(client_data& client_dat);
 
 private:
-    stdfs::path fle_path_;
+    std::filesystem::path fle_path_;
     
     file_editor_type file_editr_;
     

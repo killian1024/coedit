@@ -56,7 +56,7 @@ int server::execute()
 
 void server::add_client()
 {
-    stdfs::path fle_path("./file.txt");
+    std::filesystem::path fle_path("./file.txt");
     int client_sock;
     sockaddr_in client_addr;
     socklen_t sock_len;
@@ -83,7 +83,7 @@ void server::add_client()
 }
 
 
-bool server::server_session_exists(const stdfs::path& fle_path) const noexcept
+bool server::server_session_exists(const std::filesystem::path& fle_path) const noexcept
 {
     for (auto& x : sessions_)
     {
@@ -97,7 +97,7 @@ bool server::server_session_exists(const stdfs::path& fle_path) const noexcept
 }
 
 
-server_session& server::get_server_session(const stdfs::path& fle_path)
+server_session& server::get_server_session(const std::filesystem::path& fle_path)
 {
     for (auto& x : sessions_)
     {

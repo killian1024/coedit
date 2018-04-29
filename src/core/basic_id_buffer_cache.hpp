@@ -21,9 +21,6 @@ namespace coedit {
 namespace core {
 
 
-namespace stdfs = std::experimental::filesystem;
-
-
 template<
         std::size_t ID_BUFFER_SIZE,
         std::size_t ID_BUFFER_CACHE_SIZE
@@ -64,9 +61,9 @@ public:
             rgx_str += "[0-9]+$";
             std::regex rgx(rgx_str);
             
-            for (auto& x : stdfs::directory_iterator("."))
+            for (auto& x : std::filesystem::directory_iterator("."))
             {
-                if (stdfs::is_regular_file(x))
+                if (std::filesystem::is_regular_file(x))
                 {
                     if (std::regex_match(x.path().filename().c_str(), rgx))
                     {
@@ -223,9 +220,9 @@ private:
         return static_cast<std::uint8_t>(id % 8);
     }
     
-    stdfs::path get_id_buffer_base_path() const
+    std::filesystem::path get_id_buffer_base_path() const
     {
-        stdfs::path idb_path = ".";
+        std::filesystem::path idb_path = ".";
         
         idb_path.append("coedit-");
         idb_path.concat(std::to_string(ksys::get_pid()));
@@ -238,9 +235,9 @@ private:
         return idb_path;
     }
     
-    stdfs::path get_id_buffer_path(idbid_t idbid) const
+    std::filesystem::path get_id_buffer_path(idbid_t idbid) const
     {
-        stdfs::path idb_path = get_id_buffer_base_path();
+        std::filesystem::path idb_path = get_id_buffer_base_path();
         
         idb_path.concat(std::to_string(idbid));
         
@@ -255,7 +252,7 @@ private:
     
     void load_id_buffer(idbid_t idbid)
     {
-        stdfs::path idb_path = get_id_buffer_path(idbid);
+        std::filesystem::path idb_path = get_id_buffer_path(idbid);
         
         insert(idbid, id_buffer_type(idb_path));
         remove(idb_path.c_str());
@@ -263,9 +260,9 @@ private:
     
     bool try_load_id_buffer(idbid_t idbid)
     {
-        stdfs::path idb_path = get_id_buffer_path(idbid);
+        std::filesystem::path idb_path = get_id_buffer_path(idbid);
         
-        if (stdfs::exists(idb_path))
+        if (std::filesystem::exists(idb_path))
         {
             insert(idbid, id_buffer_type(idb_path));
             remove(idb_path.c_str());

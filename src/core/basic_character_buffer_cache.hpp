@@ -5,7 +5,7 @@
 #ifndef COEDIT_CORE_BASIC_CHARACTER_BUFFER_CACHE_HPP
 #define COEDIT_CORE_BASIC_CHARACTER_BUFFER_CACHE_HPP
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <memory>
 #include <regex>
 
@@ -19,9 +19,6 @@
 
 namespace coedit {
 namespace core {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -94,9 +91,9 @@ public:
             rgx_str += "[0-9]+$";
             std::regex rgx(rgx_str);
             
-            for (auto& x : stdfs::directory_iterator("."))
+            for (auto& x : std::filesystem::directory_iterator("."))
             {
-                if (stdfs::is_regular_file(x))
+                if (std::filesystem::is_regular_file(x))
                 {
                     if (std::regex_match(x.path().filename().c_str(), rgx))
                     {
@@ -296,9 +293,9 @@ private:
         return cb_cache_.insert(cbid, std::forward<TpValue_>(val));
     }
     
-    stdfs::path get_character_buffer_base_path() const
+    std::filesystem::path get_character_buffer_base_path() const
     {
-        stdfs::path cb_path = ".";
+        std::filesystem::path cb_path = ".";
         
         cb_path.append("coedit-");
         cb_path.concat(std::to_string(ksys::get_pid()));
@@ -309,9 +306,9 @@ private:
         return cb_path;
     }
     
-    inline stdfs::path get_character_buffer_path(cbid_t cbid) const
+    inline std::filesystem::path get_character_buffer_path(cbid_t cbid) const
     {
-        stdfs::path cb_path = get_character_buffer_base_path();
+        std::filesystem::path cb_path = get_character_buffer_base_path();
         cb_path.concat(std::to_string(cbid));
         
         return cb_path;
@@ -325,7 +322,7 @@ private:
     
     void load_character_buffer(cbid_t cbid)
     {
-        stdfs::path cb_path = get_character_buffer_path(cbid);
+        std::filesystem::path cb_path = get_character_buffer_path(cbid);
         insert_character_buffer_in_cache(cbid, character_buffer_type(cb_path, this));
         remove(cb_path.c_str());
     }
@@ -334,7 +331,7 @@ private:
     {
         if (cbidb_cache_.is_set(cbid))
         {
-            stdfs::path cb_path = get_character_buffer_path(cbid);
+            std::filesystem::path cb_path = get_character_buffer_path(cbid);
             insert_character_buffer_in_cache(cbid, character_buffer_type(cb_path, this));
             remove(cb_path.c_str());
             return true;

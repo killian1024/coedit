@@ -5,7 +5,7 @@
 #ifndef COEDIT_CORE_BASIC_LINE_CACHE_HPP
 #define COEDIT_CORE_BASIC_LINE_CACHE_HPP
 
-#include <experimental/filesystem>
+#include <filesystem>
 #include <memory>
 #include <regex>
 
@@ -21,9 +21,6 @@
 
 namespace coedit {
 namespace core {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -137,9 +134,9 @@ public:
             rgx_str += "[0-9]+$";
             std::regex rgx(rgx_str);
         
-            for (auto& x : stdfs::directory_iterator("."))
+            for (auto& x : std::filesystem::directory_iterator("."))
             {
-                if (stdfs::is_regular_file(x))
+                if (std::filesystem::is_regular_file(x))
                 {
                     if (std::regex_match(x.path().filename().c_str(), rgx))
                     {
@@ -373,9 +370,9 @@ private:
         return lne_cache_.insert(lid, std::forward<TpValue_>(val));
     }
     
-    stdfs::path get_line_base_path() const
+    std::filesystem::path get_line_base_path() const
     {
-        stdfs::path lne_path = ".";
+        std::filesystem::path lne_path = ".";
         
         lne_path.append("coedit-");
         lne_path.concat(std::to_string(ksys::get_pid()));
@@ -386,9 +383,9 @@ private:
         return lne_path;
     }
     
-    stdfs::path get_line_path(lid_t lid) const
+    std::filesystem::path get_line_path(lid_t lid) const
     {
-        stdfs::path lne_path = get_line_base_path();
+        std::filesystem::path lne_path = get_line_base_path();
         lne_path.concat(std::to_string(lid));
         
         return lne_path;
@@ -402,7 +399,7 @@ private:
     
     void load_line(lid_t lid)
     {
-        stdfs::path l_path = get_line_path(lid);
+        std::filesystem::path l_path = get_line_path(lid);
         insert_line_in_cache(lid, line_type(l_path, cb_cache_, this, file_editr_));
         remove(l_path.c_str());
     }
@@ -411,7 +408,7 @@ private:
     {
         if (lidb_cache_.is_set(lid))
         {
-            stdfs::path l_path = get_line_path(lid);
+            std::filesystem::path l_path = get_line_path(lid);
             insert_line_in_cache(lid, line_type(l_path, cb_cache_, this, file_editr_));
             remove(l_path.c_str());
             return true;

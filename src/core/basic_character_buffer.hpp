@@ -9,7 +9,7 @@
 #define _XOPEN_SOURCE 700
 #endif
 #include <cstdlib>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <unordered_set>
@@ -21,9 +21,6 @@
 
 namespace coedit {
 namespace core {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -133,7 +130,7 @@ public:
     }
     
     basic_character_buffer(
-            const stdfs::path& cb_path,
+            const std::filesystem::path& cb_path,
             character_buffer_cache_type* cb_cache
     )
             : cb_cache_(cb_cache)
@@ -377,7 +374,7 @@ public:
         return line_len;
     }
     
-    void store(const stdfs::path& cb_path) const
+    void store(const std::filesystem::path& cb_path) const
     {
         std::ofstream ofs;
         

@@ -11,7 +11,7 @@ namespace coedit {
 namespace system {
 
 
-server_session::server_session(stdfs::path fle_path)
+server_session::server_session(std::filesystem::path fle_path)
         : fle_path_(fle_path)
         , file_editr_(std::move(fle_path), core::newline_format::UNIX)
         , clients_dat_()
@@ -34,7 +34,7 @@ void server_session::add_client(const client_data& client_dat)
 }
 
 
-bool server_session::is_same_path(const stdfs::path& fle_path) const noexcept
+bool server_session::is_same_path(const std::filesystem::path& fle_path) const noexcept
 {
     return fle_path_ == fle_path;
 }

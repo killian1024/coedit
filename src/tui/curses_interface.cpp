@@ -173,7 +173,7 @@ void curses_interface::print()
     
     if (file_editr_->needs_refresh())
     {
-        cur_n_digits = kscalar::get_n_digits(file_editr_->get_n_lines());
+        cur_n_digits = kscalars::get_n_digits(file_editr_->get_n_lines());
         if (left_margin_ < cur_n_digits + 2)
         {
             left_margin_ = cur_n_digits + 2;

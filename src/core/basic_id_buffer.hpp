@@ -10,7 +10,7 @@
 #endif
 #include <cstdint>
 #include <cstdlib>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 
 #include "core_exception.hpp"
@@ -19,9 +19,6 @@
 
 namespace coedit {
 namespace core {
-
-
-namespace stdfs = std::experimental::filesystem;
 
 
 template<
@@ -44,7 +41,7 @@ public:
         allocate_memory();
     }
     
-    basic_id_buffer(const stdfs::path& idb_path)
+    basic_id_buffer(const std::filesystem::path& idb_path)
             : buf_()
             , idbid_()
     {
@@ -144,7 +141,7 @@ public:
         return true;
     }
     
-    void store(const stdfs::path& idb_path) const
+    void store(const std::filesystem::path& idb_path) const
     {
         std::ofstream ofs;
         

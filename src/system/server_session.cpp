@@ -85,7 +85,7 @@ void server_session::manage_request(client_data& client_dat)
 {
     std::cout << kios::set_blue_text << "Managing request from client" << kios::newl;
     
-    // HERE : request/response d'insersion
+    // HERE: request/response d'insersion
     
     /* Request :
      *      type { REQUESTE, RESPONSE }

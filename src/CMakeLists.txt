@@ -35,7 +35,7 @@ set(SYSTEM_SOURCE_FILES
         system/simple.hpp
         system/simple.cpp
         system/server.cpp
-        system/server_session.cpp)
+        system/server_session.cpp system/tcp_segment.hpp system/client_data.cpp)
         
 add_library(coedit_core STATIC ${CORE_SOURCE_FILES})
 set_target_properties(coedit_core PROPERTIES LINKER_LANGUAGE CXX)

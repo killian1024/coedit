@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <filesystem>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -39,25 +40,25 @@ public:
     template<typename T>
     using vector_type = std::vector<T>;
     
-    server_session(std::filesystem::path fle_path);
+    using path_type = std::filesystem::path;
+    
+    server_session(path_type fle_path);
     
     void execute();
     
     void add_client(const client_data& client_dat);
     
-    bool is_same_path(const std::filesystem::path& fle_path) const noexcept;
+    bool is_same_path(const path_type& fle_path) const noexcept;
     
     void join();
     
 private:
-    void execute_in_thread();
+    void thread_execute();
     
     void manage_request(client_data& client_dat);
 
 private:
-    std::filesystem::path fle_path_;
-    
-    file_editor_type file_editr_;
+    file_editor_type fle_editr_;
     
     vector_type<client_data> clients_dat_;
     

@@ -218,7 +218,7 @@ public:
         op_done.cbid = cur_cb->get_cbid();
         op_done.cboffset = cboffset;
         
-        //Move the data for make the space for the new character.
+        //Move the dat for make the space for the new character.
         if (cboffset < cur_cb->sze_)
         {
             memcpy((cur_cb->buf_ + cboffset + 1),
@@ -418,7 +418,7 @@ public:
     }
 
 private:
-    // todo : Implement an align allocator and give it to this class.
+    // TODO(killian.poulaud@etu.upmc.fr): Implement an align allocator and give it to this class.
     void allocate_memory()
     {
         std::size_t page_sze = CHARACTER_BUFFER_SIZE * sizeof(char_type);

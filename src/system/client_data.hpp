@@ -17,6 +17,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cstring>
+#include <iostream>
+
 
 namespace coedit {
 namespace system {
@@ -25,22 +28,32 @@ namespace system {
 class client_data
 {
 public:
-    client_data(int client_sock, const sockaddr_in& client_addr)
-            : client_sock_(client_sock)
-            , client_addr_(client_addr)
+    client_data() = default;
+    
+    client_data(int sock, const sockaddr_in& addr)
+            : sock_(sock)
+            , addr_(addr)
     {
     }
     
-    inline int get_client_socket() const noexcept
+    inline int get_socket() const noexcept
     {
-        return client_sock_;
+        return sock_;
+    }
+    
+    inline const sockaddr_in& get_address() const noexcept
+    {
+        return addr_;
     }
     
 private:
-    int client_sock_;
+    int sock_;
     
-    sockaddr_in client_addr_;
+    sockaddr_in addr_;
 };
+
+
+std::ostream& operator <<(std::ostream& os, const client_data& client_dat);
 
 
 }

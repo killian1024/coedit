@@ -75,11 +75,12 @@ void curses_interface::init()
     // Posicionar el cursor al inicio de la terminal.
     wmove(win_, 0, left_margin_);
     
-    if (file_editr_->is_file_loaded())
-    {
-        print();
-        wrefresh(win_);
-    }
+    file_editr_->handle_command(core::file_editor_command::CTRL_HOME);
+    //if (file_editr_->is_file_loaded())
+    //{
+    //    print();
+    //    wrefresh(win_);
+    //}
 }
 
 
@@ -147,6 +148,10 @@ curses_interface::file_editor_command_type curses_interface::get_command()
             
             case KEY_END:
                 cmd = file_editor_command_type::END;
+                break;
+    
+            case 447:
+                cmd = file_editor_command_type::CTRL_HOME;
                 break;
             
             case CTRL('s'):

@@ -25,6 +25,8 @@ int simple::execute()
     
     while (!execution_finish)
     {
+        interf_.print();
+        
         if ((cmd = interf_.get_command()) != file_editor_command_type::NIL)
         {
             if (cmd == file_editor_command_type::EXIT)
@@ -39,8 +41,6 @@ int simple::execute()
             {
                 file_editr_.insert_character((char_type)cmd);
             }
-            
-            interf_.print();
         }
     }
     

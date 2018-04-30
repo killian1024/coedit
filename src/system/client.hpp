@@ -5,10 +5,22 @@
 #ifndef COEDIT_SYSTEM_CLIENT_HPP
 #define COEDIT_SYSTEM_CLIENT_HPP
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <filesystem>
 
 #include "../core/basic_file_editor.hpp"
 #include "../tui/curses_interface.hpp"
+#include "system_exception.hpp"
 
 
 namespace coedit {
@@ -26,14 +38,29 @@ public:
     
     using interface_type = tui::curses_interface;
     
-    client(std::filesystem::path fle_path);
+    using path_type = std::filesystem::path;
+    
+    client(const char* serv_addr, std::uint16_t port_nbr_, path_type fle_path);
     
     int execute();
 
 private:
-    file_editor_type file_editr_;
+    void connect_to_server();
+    
+    void get_data_from_server();
+    
+    bool send_input_to_server(file_editor_command_type cmd);
+
+private:
+    path_type fle_path_;
+    
+    file_editor_type fle_editr_;
     
     interface_type interf_;
+    
+    int sock_;
+    
+    sockaddr_in serv_addr_;
 };
 
 

@@ -107,6 +107,8 @@ public:
             TpAllocator
     >;
     
+    using path_type = std::filesystem::path;
+    
     template<typename T>
     using vector_type = std::vector<T, allocator_type<T>>;
     
@@ -348,30 +350,42 @@ public:
         // todo : Make last_lne_eraser a static attribute.
         line_type& operator *() noexcept override
         {
-            static auto last_lne_eraser = lne_cache_->insert_first_line();
-            // todo : Deal whith this crap :)
-            last_lne_eraser->set_number(0);
-            
+            static lid_t eraser_lid = EMPTY;
+    
+            if (eraser_lid == EMPTY)
+            {
+                auto it = lne_cache_->insert_first_line();
+                it->set_number(0);
+                eraser_lid = it->get_lid();
+            }
+    
             if (!last_printd_)
             {
                 line_type& lne = lne_cache_->get_line(cur_lid_);
                 lne.set_y_position(cur_y_pos_);
-    
+        
                 return lne;
             }
             else
             {
-                last_lne_eraser->set_y_position(cur_y_pos_);
-                return *last_lne_eraser;
+                line_type& lne = lne_cache_->get_line(eraser_lid);
+                lne.set_y_position(cur_y_pos_);
+        
+                return lne;
             }
         }
     
         // todo : Make last_lne_eraser a static attribute.
         line_type* operator ->() noexcept override
         {
-            static auto last_lne_eraser = lne_cache_->insert_first_line();
-            // todo : Deal whith this crap :)
-            last_lne_eraser->set_number(0);
+            static lid_t eraser_lid = EMPTY;
+            
+            if (eraser_lid == EMPTY)
+            {
+                auto it = lne_cache_->insert_first_line();
+                it->set_number(0);
+                eraser_lid = it->get_lid();
+            }
     
             if (!last_printd_)
             {
@@ -382,8 +396,10 @@ public:
             }
             else
             {
-                last_lne_eraser->set_y_position(cur_y_pos_);
-                return &(*last_lne_eraser);
+                line_type& lne = lne_cache_->get_line(eraser_lid);
+                lne.set_y_position(cur_y_pos_);
+    
+                return &lne;
             }
         }
     
@@ -406,7 +422,7 @@ public:
         line_cache_type* lne_cache_;
     };
     
-    basic_file_editor(std::filesystem::path fle_path, newline_format newl_format)
+    basic_file_editor(path_type fle_path, newline_format newl_format)
             : fle_path_(std::move(fle_path))
             , fle_loaded_(false)
             , eid_(cur_eid_)
@@ -434,8 +450,6 @@ public:
         first_lid_ = cur_lid_;
         first_term_lid_ = cur_lid_;
         first_lazy_term_lid_ = cur_lid_;
-    
-        
         
         if (std::filesystem::exists(fle_path_))
         {
@@ -518,6 +532,12 @@ public:
             case file_editor_command::END:
                 return handle_end();
     
+            case file_editor_command::CTRL_HOME:
+                return handle_ctrl_home();
+    
+            case file_editor_command::CTRL_END:
+                return handle_ctrl_end();
+    
             case file_editor_command::SAVE_FILE:
                 return save_file();
         }
@@ -552,6 +572,11 @@ public:
     inline bool needs_refresh() const noexcept
     {
         return needs_refresh_;
+    }
+    
+    inline const path_type& get_file_path() const noexcept
+    {
+        return fle_path_;
     }
     
     inline eid_t get_eid() const noexcept
@@ -596,8 +621,8 @@ private:
     bool load_file()
     {
         std::ifstream ifs;
-        char_type ch;
-        char_type prev_ch = 0;
+        std::uint8_t ch;
+        std::uint8_t prev_ch = 0;
         line_type* cur_lne;
         line_type* prev_lne = nullptr;
         cursor_position prev_cursor_pos = {0, 0};
@@ -638,6 +663,7 @@ private:
             ifs.close();
             cursor_pos_ = {0, 0};
             fle_loaded_ = true;
+            needs_refresh_ = true;
             
             return true;
         }
@@ -894,6 +920,24 @@ private:
         return done;
     }
     
+    // TODO(killian.poulaud@etu.upmc.fr): Improve this method.
+    bool handle_ctrl_home()
+    {
+        cur_lid_ = first_lid_;
+        first_term_lid_ = first_lid_;
+        cursor_pos_ = {0, 0};
+        iterte_in_lazy_term_ = true;
+        needs_refresh_ = true;
+        reset_first_lazy_terminal_position();
+        
+        return true;
+    }
+    
+    bool handle_ctrl_end()
+    {
+        return false;
+    }
+    
     void update_first_lazy_terminal_position_by_cursor()
     {
         if (first_lazy_term_lid_ == EMPTY || cursor_pos_.coffset < first_lazy_term_pos_.coffset)
@@ -931,7 +975,7 @@ private:
     }
 
 private:
-    std::filesystem::path fle_path_;
+    path_type fle_path_;
     
     bool fle_loaded_;
     

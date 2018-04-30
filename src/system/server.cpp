@@ -5,6 +5,7 @@
 #include <kboost/kboost.hpp>
 
 #include "server.hpp"
+#include "tcp_segment.hpp"
 
 
 namespace coedit {
@@ -12,10 +13,10 @@ namespace system {
 
 
 server::server(std::uint16_t port_nbr)
-        : execution_finish_(false)
-        , port_nbr_(port_nbr)
-        , master_sock_()
+        : master_sock_()
         , server_addr_()
+        , port_nbr_(port_nbr)
+        , execution_finish_(false)
 {
     master_sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     memset(&server_addr_, 0, sizeof(server_addr_));
@@ -38,7 +39,7 @@ server::~server()
 
 int server::execute()
 {
-    std::cout << kios::set_light_green_text << "Starting coedit server" << kios::newl;
+    std::cout << kios::set_light_purple_text << "Starting coedit server" << kios::newl;
     
     while (!execution_finish_)
     {
@@ -56,19 +57,39 @@ int server::execute()
 
 void server::add_client()
 {
-    std::filesystem::path fle_path("./file.txt");
     int client_sock;
     sockaddr_in client_addr;
     socklen_t sock_len;
+    tcp_segment_data tcp_seg;
+    path_type fle_path;
+    client_data client_dat;
     
-    std::cout << kios::set_green_text << "Waiting..." << kios::newl;
+    std::cout << kios::set_light_purple_text << "Waiting connection" << kios::newl;
     sock_len = sizeof(client_addr);
     client_sock = accept(master_sock_, (sockaddr*)&client_addr, &sock_len);
+    client_dat = client_data(master_sock_, client_addr);
+    
+    recv(client_sock, &tcp_seg, sizeof(tcp_seg), 0);
+    fle_path = (const char*)tcp_seg.dat.raw;
+    tcp_seg.typ = tcp_segment_type::SESSION_REPLY;
+    if (!fle_path.is_absolute() || !std::filesystem::exists(fle_path))
+    {
+        tcp_seg.dat.ok = false;
+        send(client_sock, &tcp_seg, sizeof(tcp_seg), 0);
+        std::cout << kios::set_light_red_text << "Client : " << client_dat << " Rejected"
+                  << kios::newl;
+        return;
+    }
+    tcp_seg.dat.ok = true;
+    send(client_sock, &tcp_seg, sizeof(tcp_seg), 0);
+    std::cout << kios::set_light_green_text << "Client : " << client_dat << " Accepted"
+              << kios::newl;
     
     if (!server_session_exists(fle_path))
     {
         sessions_.push_back(new server_session(fle_path));
-        std::cout << kios::set_light_green_text << "Adding new session in: " << fle_path << kios::newl;
+        std::cout << kios::set_light_green_text << "Adding new session in: "
+                  << fle_path << kios::newl;
         
         sessions_.back()->add_client(client_data(client_sock, client_addr));
         sessions_.back()->execute();
@@ -79,11 +100,12 @@ void server::add_client()
         serv_session.add_client(client_data(client_sock, client_addr));
     }
     
-    std::cout << kios::set_light_blue_text << "Adding new client to: " << fle_path << kios::newl;
+    std::cout << kios::set_light_green_text << "Adding new client to: "
+              << fle_path << kios::newl;
 }
 
 
-bool server::server_session_exists(const std::filesystem::path& fle_path) const noexcept
+bool server::server_session_exists(const path_type& fle_path) const noexcept
 {
     for (auto& x : sessions_)
     {
@@ -97,7 +119,7 @@ bool server::server_session_exists(const std::filesystem::path& fle_path) const 
 }
 
 
-server_session& server::get_server_session(const std::filesystem::path& fle_path)
+server_session& server::get_server_session(const path_type& fle_path)
 {
     for (auto& x : sessions_)
     {

@@ -21,6 +21,8 @@ enum class file_editor_command : std::uint32_t
     GO_DOWN,
     HOME,
     END,
+    CTRL_HOME,
+    CTRL_END,
     SAVE_FILE,
     EXIT,
     MAX = 31

@@ -178,20 +178,28 @@ void curses_interface::print()
     
     if (file_editr_->needs_refresh())
     {
+        wclear(win_);
+        
         cur_n_digits = kscalars::get_n_digits(file_editr_->get_n_lines());
         if (left_margin_ < cur_n_digits + 2)
         {
             left_margin_ = cur_n_digits + 2;
         }
         
-        for (auto it_lne = file_editr_->begin_lazy_terminal();
-             it_lne != file_editr_->end_lazy_terminal();
+        //for (auto it_lne = file_editr_->begin_lazy_terminal();
+        //     it_lne != file_editr_->end_lazy_terminal();
+        //     ++it_lne)
+        for (auto it_lne = file_editr_->begin_terminal();
+             it_lne != file_editr_->end_terminal();
              ++it_lne)
         {
             print_line_number(it_lne);
             
-            for (auto it_ch = it_lne->begin_lazy_terminal();
-                 it_ch != it_lne->end_lazy_terminal();
+            //for (auto it_ch = it_lne->begin_lazy_terminal();
+            //     it_ch != it_lne->end_lazy_terminal();
+            //     ++it_ch)
+            for (auto it_ch = it_lne->begin_terminal();
+                 it_ch != it_lne->end_terminal();
                  ++it_ch)
             {
                 mvwprintw(win_, it_lne.get_y_position(), it_ch.get_x_position() + left_margin_,
@@ -205,7 +213,8 @@ void curses_interface::print()
 }
 
 
-void curses_interface::print_line_number(typename file_editor_type::lazy_terminal_iterator& it_lne)
+//void curses_interface::print_line_number(typename file_editor_type::lazy_terminal_iterator& it_lne)
+void curses_interface::print_line_number(typename file_editor_type::terminal_iterator& it_lne)
 {
     std::stringstream sstr_lne_numb;
     auto cur_numb = it_lne->get_number();

@@ -18,10 +18,12 @@ namespace system {
 
 enum class tcp_segment_type : std::uint8_t
 {
+    NIL,
     SESSION_REQUEST,
     SESSION_REPLY,
     LEAVE_REQUEST,
     LEAVE_REPLY,
+    NEWLINE_REQUEST,
     INSERSION_REQUEST,
     INSERSION_REPLY,
     INSERSION_END
@@ -31,14 +33,17 @@ enum class tcp_segment_type : std::uint8_t
 struct tcp_segment_data
 {
     tcp_segment_data()
+            : typ(tcp_segment_type::NIL)
+            , dat()
     {
-        memset(this, 0, sizeof(tcp_segment_data));
+        memset(dat.raw, 0, 4096);
     }
     
     tcp_segment_data(tcp_segment_type tcp_seg_typ)
+            : typ(tcp_seg_typ)
+            , dat()
     {
-        memset(this, 0, sizeof(tcp_segment_data));
-        typ = tcp_seg_typ;
+        memset(dat.raw, 0, 4096);
     }
     
     tcp_segment_type typ;

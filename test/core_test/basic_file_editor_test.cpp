@@ -198,3 +198,30 @@ TEST(basic_file_editor, iterator)
     
     iosr.unredirect();
 }
+
+
+TEST(basic_file_editor, insert)
+{
+    using file_editor = cc::file_editor;
+    
+    file_editor fle_editr("file.txt", cc::newline_format::UNIX);
+    file_editor::char_type data = 32;
+    
+    fle_editr.set_terminal_size(80, 80);
+    
+    fle_editr.insert_character(data++);
+    
+    for (auto lne = fle_editr.begin_terminal();
+         lne != fle_editr.end_terminal();
+         ++lne)
+    {
+        for (auto ch = lne->begin_terminal();
+             ch != lne->end_terminal();
+             ++ch)
+        {
+            //std::cout << (char)*ch;
+        }
+        
+        std::cout << std::endl;
+    }
+}

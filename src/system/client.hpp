@@ -49,11 +49,11 @@ public:
 private:
     void connect_to_server();
     
-    void get_data_from_server();
+    void get_file_data_from_server();
     
-    bool send_command_to_server(file_editor_command_type cmd);
+    bool send_command(file_editor_command_type cmd);
     
-    void thread_execute();
+    void recieve_commands();
 
 private:
     path_type fle_path_;

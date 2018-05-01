@@ -252,11 +252,20 @@ public:
         return insert_line_in_cache(new_lid, line_type(new_lid, cb_cache_, this, file_editr_));
     }
     
-    iterator insert_line_after(lid_t lid, loffset_t loffset, newline_format newl_format)
+    iterator insert_line_after(
+            lid_t cur_lid,
+            loffset_t loffset,
+            newline_format newl_format,
+            lid_t new_lid = EMPTY
+    )
     {
-        lid_t new_lid = get_new_lid();
-        line_type& current_lne = get_line(lid);
+        line_type& current_lne = get_line(cur_lid);
         iterator it_newline;
+        
+        if (new_lid == EMPTY)
+        {
+            new_lid = get_new_lid();
+        }
     
         switch (newl_format)
         {
@@ -276,7 +285,7 @@ public:
         }
         
         it_newline = insert_line_in_cache(new_lid, line_type(
-                new_lid, lid, cb_cache_, this, file_editr_));
+                new_lid, cur_lid, cb_cache_, this, file_editr_));
         
         return it_newline;
     }

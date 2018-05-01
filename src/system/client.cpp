@@ -36,12 +36,12 @@ int client::execute()
     file_editor_command_type cmd;
     
     connect_to_server();
-    get_data_from_server();
+    get_file_data_from_server();
     
     interf_.init();
     interf_.print();
     
-    thrd_ = std::thread(&client::thread_execute, this);
+    thrd_ = std::thread(&client::recieve_commands, this);
     
     while (!execution_finish_)
     {
@@ -51,7 +51,7 @@ int client::execute()
             {
                 execution_finish_ = true;
             }
-            else if (!send_command_to_server(cmd))
+            else if (!send_command(cmd))
             {
                 mutx_fle_editr_.lock();
                 fle_editr_.handle_command(cmd);
@@ -94,7 +94,7 @@ void client::connect_to_server()
 }
 
 
-void client::get_data_from_server()
+void client::get_file_data_from_server()
 {
     constexpr const std::size_t data_size =
             sizeof(tcp_segment_data::data) / sizeof(file_editor_type::char_type);
@@ -109,16 +109,26 @@ void client::get_data_from_server()
     {
         recv(sock_, &tcp_seg, sizeof(tcp_seg), 0);
         
-        for (std::size_t i = 0; i < data_size; ++i)
+        if (tcp_seg.typ == tcp_segment_type::NEWLINE_REQUEST)
         {
-            if (dat[i] != 0)
+            fle_editr_.insert_character(core::LF, tcp_seg.dat.editr_cmd.lid);
+        }
+        else
+        {
+            for (std::size_t i = 0; i < data_size; ++i)
             {
-                fle_editr_.insert_character(dat[i]);
-            }
-            else
-            {
-                insersion_end = true;
-                break;
+                if (dat[i] != 0)
+                {
+                    fle_editr_.insert_character(dat[i]);
+                }
+                else
+                {
+                    if (i == 0)
+                    {
+                        insersion_end = true;
+                    }
+                    break;
+                }
             }
         }
         
@@ -128,7 +138,7 @@ void client::get_data_from_server()
 }
 
 
-bool client::send_command_to_server(file_editor_command_type cmd)
+bool client::send_command(file_editor_command_type cmd)
 {
     tcp_segment_data tcp_seg;
     
@@ -149,7 +159,7 @@ bool client::send_command_to_server(file_editor_command_type cmd)
 }
 
 
-void client::thread_execute()
+void client::recieve_commands()
 {
     tcp_segment_data tcp_seg;
     

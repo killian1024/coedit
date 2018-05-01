@@ -525,6 +525,21 @@ public:
     {
     }
     
+    basic_line(file_editor_type* file_editr)
+            : lid_(EMPTY)
+            , prev_(EMPTY)
+            , nxt_(EMPTY)
+            , cbid_(EMPTY)
+            , cboffset_(0)
+            , n_chars_(0)
+            , y_pos_(0)
+            , numb_(0)
+            , cb_cache_(nullptr)
+            , lne_cache_(nullptr)
+            , file_editr_(file_editr)
+    {
+    }
+    
     basic_line(
             lid_t lid,
             character_buffer_cache_type* cb_cache,
@@ -726,7 +741,7 @@ public:
         }
     }
     
-    // todo : This method is the evil, but you can do it better, good luck.
+    // TODO(killian.poulaud@etu.upmc.fr): This method is the evil, but you can do it better, good luck.
     void erase_character(loffset_t loffset)
     {
         using cbtot_t = typename character_buffer_type::operation_types;
@@ -959,6 +974,11 @@ public:
     
     loffset_t get_line_length()
     {
+        if (cb_cache_ == nullptr)
+        {
+            return 0;
+        }
+        
         character_buffer_type& cur_cb = cb_cache_->get_character_buffer(cbid_);
         
         if (n_chars_ > 0)

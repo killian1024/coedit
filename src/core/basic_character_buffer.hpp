@@ -198,10 +198,12 @@ public:
         return *this;
     }
     
+    // TODO(killian.poulaud@etu.upmc.fr): Deal with the memcpy bug correctly.
     operation_done insert_character(char_type ch, cboffset_t cboffset)
     {
         operation_done op_done;
         character_buffer_type* cur_cb = &get_character_buffer_for_insertion(&cboffset);
+        char_type aux[CHARACTER_BUFFER_SIZE] = {0};
         
         // Fragmentation policy
         if (cur_cb->sze_ == CHARACTER_BUFFER_SIZE)
@@ -221,8 +223,12 @@ public:
         //Move the dat for make the space for the new character.
         if (cboffset < cur_cb->sze_)
         {
-            memcpy((cur_cb->buf_ + cboffset + 1),
+            memcpy(aux,
                    (cur_cb->buf_ + cboffset),
+                   (cur_cb->sze_ - cboffset) * sizeof(char_type));
+            
+            memcpy((cur_cb->buf_ + cboffset + 1),
+                   aux,
                    (cur_cb->sze_ - cboffset) * sizeof(char_type));
         }
     

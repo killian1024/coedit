@@ -40,7 +40,8 @@ public:
     void print();
 
 private:
-    void print_line_number(typename file_editor_type::lazy_terminal_iterator& it_lne);
+    //void print_line_number(typename file_editor_type::lazy_terminal_iterator& it_lne);
+    void print_line_number(typename file_editor_type::terminal_iterator& it_lne);
     
     void update_cursor();
     

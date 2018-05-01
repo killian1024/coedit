@@ -44,37 +44,32 @@ void server_session::add_client(const client_data& client_dat)
     {
         if (!first_lne)
         {
-            dat[i] = core::LF;
-            ++i;
-    
-            if (i >= data_size)
-            {
-                send(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
-                memset(&tcp_seg.dat.raw[0], 0, sizeof(tcp_seg.dat.raw));
-                i = 0;
-            }
+            tcp_seg.typ = tcp_segment_type::NEWLINE_REQUEST;
+            tcp_seg.dat.editr_cmd.lid = lne.get_lid();
+            send(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
+            memset(&tcp_seg.dat.raw[0], 0, sizeof(tcp_seg.dat.raw));
         }
         
+        i = 0;
         for (auto& ch : lne)
         {
             dat[i] = ch;
             ++i;
-            
-            if (i >= data_size)
-            {
-                send(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
-                memset(&tcp_seg.dat.raw[0], 0, sizeof(tcp_seg.dat.raw));
-                i = 0;
-            }
+        }
+        
+        if (i != 0)
+        {
+            tcp_seg.typ = tcp_segment_type::INSERSION_REQUEST;
+            send(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
+            memset(&tcp_seg.dat.raw[0], 0, sizeof(tcp_seg.dat.raw));
         }
         
         first_lne = false;
     }
     
-    if (i != 0)
-    {
-        send(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
-    }
+    memset(&tcp_seg.dat.raw[0], 0, sizeof(tcp_seg.dat.raw));
+    tcp_seg.typ = tcp_segment_type::INSERSION_REQUEST;
+    send(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
     
     mutx_clients_dat_.unlock();
 }
@@ -112,8 +107,9 @@ void server_session::thread_execute()
         }
         mutx_clients_dat_.unlock();
         
+        // FIXME(killian.poulaud@etu.upmc.fr): New file descriptors will not be concidered until next select.
         select(max_fd + 1, &fd_socks_ , nullptr, nullptr, nullptr);
-    
+        
         mutx_clients_dat_.lock();
         for (auto& x : clients_dat_)
         {
@@ -131,10 +127,16 @@ void server_session::manage_request(client_data& client_dat)
 {
     tcp_segment_data tcp_seg;
     
-    std::cout << kios::set_light_purple_text << "Managing request from Client : "
-              << client_dat << kios::newl;
-    
     recv(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
+    
+    std::cout << kios::set_light_blue_text << "Managing request from Client : " << client_dat
+              << " [" << tcp_seg.dat.editr_cmd.lid << ":"
+              << (std::uint32_t)tcp_seg.dat.editr_cmd.cmd << "]"
+              << kios::newl;
+    
+    fle_editr_.handle_command(tcp_seg.dat.editr_cmd.lid,
+                              tcp_seg.dat.editr_cmd.loffset,
+                              tcp_seg.dat.editr_cmd.cmd);
     
     for (auto& x : clients_dat_)
     {

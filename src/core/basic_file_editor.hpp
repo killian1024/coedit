@@ -107,6 +107,18 @@ public:
             TpAllocator
     >;
     
+    using file_editor_type = basic_file_editor<
+            TpChar,
+            CHARACTER_BUFFER_SIZE,
+            CHARACTER_BUFFER_CACHE_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_SIZE,
+            CHARACTER_BUFFER_ID_BUFFER_CACHE_SIZE,
+            LINE_CACHE_SIZE,
+            LINE_ID_BUFFER_SIZE,
+            LINE_ID_BUFFER_CACHE_SIZE,
+            TpAllocator
+    >;
+    
     using path_type = std::filesystem::path;
     
     template<typename T>
@@ -285,7 +297,8 @@ public:
                 coffset_t cur_y_pos,
                 coffset_t term_y_sze,
                 bool iterte,
-                line_cache_type* lne_cache
+                line_cache_type* lne_cache,
+                file_editor_type* fle_editr
         ) noexcept
                 : cur_lid_(first_lid)
                 , cur_y_pos_(cur_y_pos)
@@ -293,6 +306,7 @@ public:
                 , iterte_(iterte)
                 , last_printd_(false)
                 , lne_cache_(lne_cache)
+                , fle_editr_(fle_editr)
         {
         }
     
@@ -347,17 +361,10 @@ public:
             return cur_lid_ == EMPTY;
         }
         
-        // todo : Make last_lne_eraser a static attribute.
+        // TODO(killian.poulaud@etu.upmc.fr): eraser_lne has to be a static attribute.
         line_type& operator *() noexcept override
         {
-            static lid_t eraser_lid = EMPTY;
-    
-            if (eraser_lid == EMPTY)
-            {
-                auto it = lne_cache_->insert_first_line();
-                it->set_number(0);
-                eraser_lid = it->get_lid();
-            }
+            static line_type eraser_lne(fle_editr_);
     
             if (!last_printd_)
             {
@@ -368,38 +375,29 @@ public:
             }
             else
             {
-                line_type& lne = lne_cache_->get_line(eraser_lid);
-                lne.set_y_position(cur_y_pos_);
+                eraser_lne.set_y_position(cur_y_pos_);
         
-                return lne;
+                return eraser_lne;
             }
         }
     
-        // todo : Make last_lne_eraser a static attribute.
+        // TODO(killian.poulaud@etu.upmc.fr): eraser_lne has to be a static attribute.
         line_type* operator ->() noexcept override
         {
-            static lid_t eraser_lid = EMPTY;
-            
-            if (eraser_lid == EMPTY)
-            {
-                auto it = lne_cache_->insert_first_line();
-                it->set_number(0);
-                eraser_lid = it->get_lid();
-            }
+            static line_type eraser_lne(fle_editr_);
     
             if (!last_printd_)
             {
                 line_type& lne = lne_cache_->get_line(cur_lid_);
                 lne.set_y_position(cur_y_pos_);
-    
+        
                 return &lne;
             }
             else
             {
-                line_type& lne = lne_cache_->get_line(eraser_lid);
-                lne.set_y_position(cur_y_pos_);
-    
-                return &lne;
+                eraser_lne.set_y_position(cur_y_pos_);
+        
+                return &eraser_lne;
             }
         }
     
@@ -420,6 +418,8 @@ public:
         bool last_printd_;
         
         line_cache_type* lne_cache_;
+    
+        file_editor_type* fle_editr_;
     };
     
     basic_file_editor(path_type fle_path, newline_format newl_format)
@@ -480,7 +480,8 @@ public:
                 first_lazy_term_pos_.coffset,
                 term_y_sze_,
                 iterte_in_lazy_term_,
-                &lne_cache_);
+                &lne_cache_,
+                this);
     
         first_lazy_term_lid_ = EMPTY;
         iterte_in_lazy_term_ = false;
@@ -582,7 +583,7 @@ public:
             {
                 insert_character((char_type)cmd);
             }
-    
+            
             cur_lid_ = old_cur_lid;
             first_term_lid_ = old_first_term_lid;
             cursor_pos_ = old_cursor_pos;
@@ -602,6 +603,26 @@ public:
             line_type& current_lne = lne_cache_.get_line(cur_lid_);
             current_lne.insert_character(ch, cursor_pos_.loffset);
     
+            update_first_lazy_terminal_position_by_cursor();
+            
+            ++cursor_pos_.loffset;
+        }
+        
+        needs_refresh_ = true;
+    }
+    
+    // TODO(killian.poulaud@etu.upmc.fr): Delete this method, this is just a quick work around.
+    void insert_character(char_type ch, lid_t new_lid)
+    {
+        if (ch == LF || ch == CR)
+        {
+            handle_newline(new_lid);
+        }
+        else
+        {
+            line_type& current_lne = lne_cache_.get_line(cur_lid_);
+            current_lne.insert_character(ch, cursor_pos_.loffset);
+            
             update_first_lazy_terminal_position_by_cursor();
             
             ++cursor_pos_.loffset;
@@ -785,6 +806,31 @@ private:
             reset_first_lazy_terminal_position();
         }
     
+        update_first_lazy_terminal_position_by_cursor();
+        iterte_in_lazy_term_ = true;
+        needs_refresh_ = true;
+        
+        handle_go_down();
+        handle_home();
+        
+        return true;
+    }
+    
+    bool handle_newline(lid_t new_lid)
+    {
+        std::size_t cur_n_digits;
+        std::size_t new_n_digits;
+        
+        lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_, new_lid);
+        
+        cur_n_digits = kscalars::get_n_digits(n_lnes_);
+        ++n_lnes_;
+        new_n_digits = kscalars::get_n_digits(n_lnes_);
+        if (cur_n_digits != new_n_digits)
+        {
+            reset_first_lazy_terminal_position();
+        }
+        
         update_first_lazy_terminal_position_by_cursor();
         iterte_in_lazy_term_ = true;
         needs_refresh_ = true;

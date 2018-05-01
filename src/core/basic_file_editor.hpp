@@ -587,6 +587,7 @@ public:
             cur_lid_ = old_cur_lid;
             first_term_lid_ = old_first_term_lid;
             cursor_pos_ = old_cursor_pos;
+            needs_refresh_ = true;
         }
     
         return true;

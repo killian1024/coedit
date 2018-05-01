@@ -545,6 +545,52 @@ public:
         return false;
     }
     
+    bool handle_command(lid_t lid, loffset_t loffset, file_editor_command cmd)
+    {
+        //cur_lid_ = first_lid_;
+        //first_term_lid_ = first_lid_;
+        //cursor_pos_ = {0, 0};
+        //iterte_in_lazy_term_ = true;
+        //needs_refresh_ = true;
+        //reset_first_lazy_terminal_position();
+        
+        if (lid == cur_lid_)
+        {
+            if (cmd <= file_editor_command::MAX)
+            {
+                handle_command(cmd);
+            }
+            else
+            {
+                insert_character((char_type)cmd);
+            }
+        }
+        else
+        {
+            lid_t old_cur_lid = cur_lid_;
+            lid_t old_first_term_lid = first_term_lid_;
+            cursor_position old_cursor_pos = cursor_pos_;
+    
+            cur_lid_ = lid;
+            cursor_pos_.loffset = loffset;
+    
+            if (cmd <= file_editor_command::MAX)
+            {
+                handle_command(cmd);
+            }
+            else
+            {
+                insert_character((char_type)cmd);
+            }
+    
+            cur_lid_ = old_cur_lid;
+            first_term_lid_ = old_first_term_lid;
+            cursor_pos_ = old_cursor_pos;
+        }
+    
+        return true;
+    }
+    
     void insert_character(char_type ch)
     {
         if (ch == LF || ch == CR)
@@ -587,6 +633,11 @@ public:
     inline std::size_t get_n_lines() const noexcept
     {
         return n_lnes_;
+    }
+    
+    inline lid_t get_current_lid() const noexcept
+    {
+        return cur_lid_;
     }
     
     inline const cursor_position& get_cursor_position() const noexcept

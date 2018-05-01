@@ -64,7 +64,7 @@ private:
     
     fd_set fd_socks_;
     
-    std::thread thd_;
+    std::thread thrd_;
     
     std::mutex mutx_clients_dat_;
 };

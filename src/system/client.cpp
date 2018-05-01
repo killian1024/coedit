@@ -16,6 +16,9 @@ client::client(const char* serv_addr, std::uint16_t port_nbr_, path_type fle_pat
         , interf_(&fle_editr_)
         , sock_()
         , serv_addr_()
+        , thrd_()
+        , mutx_fle_editr_()
+        , execution_finish_(false)
 {
     hostent* hostnt;
     
@@ -31,33 +34,29 @@ client::client(const char* serv_addr, std::uint16_t port_nbr_, path_type fle_pat
 int client::execute()
 {
     file_editor_command_type cmd;
-    bool execution_finish = false;
     
     connect_to_server();
     get_data_from_server();
     
     interf_.init();
+    interf_.print();
     
-    while (!execution_finish)
+    thrd_ = std::thread(&client::thread_execute, this);
+    
+    while (!execution_finish_)
     {
-        interf_.print();
-        
         if ((cmd = interf_.get_command()) != file_editor_command_type::NIL)
         {
             if (cmd == file_editor_command_type::EXIT)
             {
-                execution_finish = true;
+                execution_finish_ = true;
             }
-            else if (send_input_to_server(cmd))
+            else if (!send_command_to_server(cmd))
             {
-                if (cmd <= file_editor_command_type::MAX)
-                {
-                    fle_editr_.handle_command(cmd);
-                }
-                else
-                {
-                    fle_editr_.insert_character((char_type)cmd);
-                }
+                mutx_fle_editr_.lock();
+                fle_editr_.handle_command(cmd);
+                interf_.print();
+                mutx_fle_editr_.unlock();
             }
         }
     }
@@ -129,11 +128,47 @@ void client::get_data_from_server()
 }
 
 
-bool client::send_input_to_server(file_editor_command_type cmd)
+bool client::send_command_to_server(file_editor_command_type cmd)
 {
+    tcp_segment_data tcp_seg;
     
+    tcp_seg.typ = tcp_segment_type::INSERSION_REQUEST;
+    tcp_seg.dat.editr_cmd.lid = fle_editr_.get_current_lid();
+    tcp_seg.dat.editr_cmd.loffset = fle_editr_.get_cursor_position().loffset;
+    tcp_seg.dat.editr_cmd.cmd = cmd;
+    
+    if (cmd > file_editor_command_type::MAX ||
+        cmd == file_editor_command_type::NEWLINE ||
+        cmd == file_editor_command_type::BACKSPACE)
+    {
+        send(sock_, &tcp_seg, sizeof(tcp_seg), 0);
+        return true;
+    }
     
     return false;
+}
+
+
+void client::thread_execute()
+{
+    tcp_segment_data tcp_seg;
+    
+    while (!execution_finish_)
+    {
+        recv(sock_, &tcp_seg, sizeof(tcp_seg), 0);
+    
+        if (tcp_seg.dat.editr_cmd.cmd > file_editor_command_type::MAX ||
+            tcp_seg.dat.editr_cmd.cmd == file_editor_command_type::NEWLINE ||
+            tcp_seg.dat.editr_cmd.cmd == file_editor_command_type::BACKSPACE)
+        {
+            mutx_fle_editr_.lock();
+            fle_editr_.handle_command(tcp_seg.dat.editr_cmd.lid,
+                                      tcp_seg.dat.editr_cmd.loffset,
+                                      tcp_seg.dat.editr_cmd.cmd);
+            interf_.print();
+            mutx_fle_editr_.unlock();
+        }
+    }
 }
 
 

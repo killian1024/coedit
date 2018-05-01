@@ -15,14 +15,14 @@ namespace system {
 server_session::server_session(path_type fle_path)
         : fle_editr_(std::move(fle_path), core::newline_format::UNIX)
         , clients_dat_()
-        , thd_()
+        , thrd_()
 {
 }
 
 
 void server_session::execute()
 {
-    thd_ = std::thread(&server_session::thread_execute, this);
+    thrd_ = std::thread(&server_session::thread_execute, this);
 }
 
 
@@ -88,7 +88,7 @@ bool server_session::is_same_path(const std::filesystem::path& fle_path) const n
 
 void server_session::join()
 {
-    thd_.join();
+    thrd_.join();
 }
 
 
@@ -134,14 +134,11 @@ void server_session::manage_request(client_data& client_dat)
     std::cout << kios::set_light_purple_text << "Managing request from Client : "
               << client_dat << kios::newl;
     
-    read(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg));
+    recv(client_dat.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
     
     for (auto& x : clients_dat_)
     {
-        if (&client_dat != &x)
-        {
-        
-        }
+        send(x.get_socket(), &tcp_seg, sizeof(tcp_seg), 0);
     }
 }
 

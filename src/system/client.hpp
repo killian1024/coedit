@@ -17,6 +17,8 @@
 #include <unistd.h>
 
 #include <filesystem>
+#include <mutex>
+#include <thread>
 
 #include "../core/basic_file_editor.hpp"
 #include "../tui/curses_interface.hpp"
@@ -49,7 +51,9 @@ private:
     
     void get_data_from_server();
     
-    bool send_input_to_server(file_editor_command_type cmd);
+    bool send_command_to_server(file_editor_command_type cmd);
+    
+    void thread_execute();
 
 private:
     path_type fle_path_;
@@ -61,6 +65,12 @@ private:
     int sock_;
     
     sockaddr_in serv_addr_;
+    
+    std::thread thrd_;
+    
+    std::mutex mutx_fle_editr_;
+    
+    bool execution_finish_;
 };
 
 

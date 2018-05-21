@@ -15,8 +15,8 @@ TEST(basic_file_editor, insert_character)
     cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
 }
 
 
@@ -25,18 +25,18 @@ TEST(basic_file_editor, handle_command)
     cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
-    file_editr.insert_character(data++);
-    file_editr.insert_character('\n');
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, '\n');
 }
 
 
@@ -47,31 +47,31 @@ TEST(basic_file_editor, handle_newline_1)
     
     file_editr.set_terminal_size(4, 80);
     
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_UP));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::HOME));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_RIGHT));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     
     std::size_t n_lnes = 0;
     for (auto lne = file_editr.begin_terminal();
@@ -98,10 +98,10 @@ TEST(basic_file_editor, handle_newline_2)
     
     file_editr.set_terminal_size(4, 80);
     
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::GO_LEFT));
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
@@ -135,10 +135,10 @@ TEST(basic_file_editor, handle_end)
     cc::file_editor file_editr("", cc::newline_format::UNIX);
     cc::file_editor::char_type data = 65;
     
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::END));
 }
 
@@ -169,18 +169,18 @@ TEST(basic_file_editor, iterator)
     file_editor file_editr("", cc::newline_format::UNIX);
     file_editor::char_type data = 48;
     
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
-    file_editr.insert_character(data++);
-    file_editr.insert_character(data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
+    file_editr.handle_command(cc::fec_t::INSERT, data++);
     EXPECT_NO_THROW(file_editr.handle_command(cc::file_editor_command::NEWLINE));
     
     kios::ios_redirect iosr(std::cout);
@@ -209,7 +209,7 @@ TEST(basic_file_editor, insert)
     
     fle_editr.set_terminal_size(80, 80);
     
-    fle_editr.insert_character(data++);
+    fle_editr.handle_command(cc::fec_t::INSERT, data++);
     
     for (auto lne = fle_editr.begin_terminal();
          lne != fle_editr.end_terminal();

@@ -97,6 +97,8 @@ bool curses_interface::get_command(file_editor_command_type* cmd, char_type* ch)
     core::coffset_t term_y_sze;
     core::loffset_t term_x_sze;
     
+    *ch = 0;
+    
     do
     {
         inpt = wgetch(win_);

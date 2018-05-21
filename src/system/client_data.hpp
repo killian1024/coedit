@@ -46,6 +46,16 @@ public:
         return addr_;
     }
     
+    bool operator ==(const client_data& rhs) const
+    {
+        return sock_ == rhs.sock_;
+    }
+    
+    bool operator !=(const client_data& rhs) const
+    {
+        return !(rhs == *this);
+    }
+
 private:
     int sock_;
     

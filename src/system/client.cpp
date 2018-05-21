@@ -14,20 +14,32 @@ client::client(const char* serv_addr, std::uint16_t port_nbr_, path_type fle_pat
         : fle_path_(std::move(fle_path))
         , fle_editr_(path_type(), core::newline_format::UNIX)
         , interf_(&fle_editr_)
-        , sock_()
+        , sock_(-1)
         , serv_addr_()
         , thrd_()
         , mutx_fle_editr_()
         , execution_finish_(false)
+        , connectd_(false)
 {
     hostent* hostnt;
-    
-    sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    hostnt = gethostbyname(serv_addr);
+    if ((sock_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+    {
+        throw impossible_to_open_socket_exception();
+    }
+    if ((hostnt = gethostbyname(serv_addr)) == nullptr)
+    {
+        throw bad_server_address_exception();
+    }
     memset(&serv_addr_, 0, sizeof(serv_addr_));
     serv_addr_.sin_family = AF_INET;
     memcpy(&serv_addr_.sin_addr, hostnt->h_addr_list[0], static_cast<size_t>(hostnt->h_length));
     serv_addr_.sin_port = htons(port_nbr_);
+}
+
+
+client::~client()
+{
+    disconnect_to_server();
 }
 
 
@@ -52,7 +64,7 @@ int client::execute()
             {
                 execution_finish_ = true;
             }
-            else if (!send_command(cmd))
+            else if (!send_command(cmd, ch))
             {
                 mutx_fle_editr_.lock();
                 fle_editr_.handle_command(cmd);
@@ -73,7 +85,7 @@ void client::connect_to_server()
     tcp_segment_data tcp_seg;
     const std::string& sfle_path = fle_path_.native();
     
-    std::cout << kios::set_light_purple_text << "Connecting to server...";
+    std::cout << kios::set_light_purple_text << "Connecting to server..." << std::flush;
     if (connect(sock_, (sockaddr*)&serv_addr_, sizeof(serv_addr_)) == -1)
     {
         std::cout << kios::set_light_red_text << "[ERR]" << kios::newl;
@@ -81,17 +93,44 @@ void client::connect_to_server()
     }
     std::cout << kios::set_light_green_text << "[OK]" << kios::newl << std::flush;
     
-    std::cout << kios::set_light_purple_text << "Sending request to server...";
+    connectd_ = true;
+    
+    std::cout << kios::set_light_purple_text << "Sending request to server..." << std::flush;
     tcp_seg.typ = tcp_segment_type::SESSION_REQUEST;
     memcpy(&tcp_seg.dat.raw[0], sfle_path.c_str(), sfle_path.size());
-    send(sock_, &tcp_seg, sizeof(tcp_seg), 0);
-    recv(sock_, &tcp_seg, sizeof(tcp_seg), 0);
+    
+    if ((send(sock_, &tcp_seg, sizeof(tcp_seg), MSG_NOSIGNAL)) == -1)
+    {
+        throw bad_send_exception();
+    }
+    if ((recv(sock_, &tcp_seg, sizeof(tcp_seg), 0)) == -1)
+    {
+        throw bad_receive_exception();
+    }
+    
     if (!tcp_seg.dat.ok)
     {
         std::cout << kios::set_light_red_text << "[ERR]" << kios::newl;
         throw bad_server_request_exception();
     }
     std::cout << kios::set_light_green_text << "[OK]" << kios::newl << std::flush;
+}
+
+
+void client::disconnect_to_server()
+{
+    if (connectd_)
+    {
+        shutdown(sock_, SHUT_RDWR);
+        connectd_ = false;
+    }
+    if (sock_ != -1)
+    {
+        close(sock_);
+        sock_ = -1;
+    }
+    
+    connectd_ = false;
 }
 
 
@@ -108,7 +147,10 @@ void client::get_file_data_from_server()
     
     do
     {
-        recv(sock_, &tcp_seg, sizeof(tcp_seg), 0);
+        if ((recv(sock_, &tcp_seg, sizeof(tcp_seg), 0)) == -1)
+        {
+            throw bad_receive_exception();
+        }
         
         if (tcp_seg.typ == tcp_segment_type::NEWLINE_REQUEST)
         {
@@ -139,7 +181,7 @@ void client::get_file_data_from_server()
 }
 
 
-bool client::send_command(file_editor_command_type cmd)
+bool client::send_command(file_editor_command_type cmd, char_type ch)
 {
     tcp_segment_data tcp_seg;
     
@@ -147,12 +189,24 @@ bool client::send_command(file_editor_command_type cmd)
     tcp_seg.dat.editr_cmd.lid = fle_editr_.get_current_lid();
     tcp_seg.dat.editr_cmd.loffset = fle_editr_.get_cursor_position().loffset;
     tcp_seg.dat.editr_cmd.cmd = cmd;
+    tcp_seg.dat.editr_cmd.ch = ch;
     
-    if (cmd > file_editor_command_type::MAX ||
+    if (cmd == file_editor_command_type::INSERT ||
         cmd == file_editor_command_type::NEWLINE ||
         cmd == file_editor_command_type::BACKSPACE)
     {
-        send(sock_, &tcp_seg, sizeof(tcp_seg), 0);
+        if (connectd_)
+        {
+            if ((send(sock_, &tcp_seg, sizeof(tcp_seg), MSG_NOSIGNAL)) == -1)
+            {
+                disconnect_to_server();
+                throw bad_send_exception();
+            }
+        }
+        else
+        {
+            fle_editr_.handle_command(cmd, ch);
+        }
         return true;
     }
     
@@ -166,16 +220,21 @@ void client::recieve_commands()
     
     while (!execution_finish_)
     {
-        recv(sock_, &tcp_seg, sizeof(tcp_seg), 0);
+        if ((recv(sock_, &tcp_seg, sizeof(tcp_seg), 0)) == -1)
+        {
+            disconnect_to_server();
+            throw bad_receive_exception();
+        }
     
-        if (tcp_seg.dat.editr_cmd.cmd > file_editor_command_type::MAX ||
+        if (tcp_seg.dat.editr_cmd.cmd == file_editor_command_type::INSERT ||
             tcp_seg.dat.editr_cmd.cmd == file_editor_command_type::NEWLINE ||
             tcp_seg.dat.editr_cmd.cmd == file_editor_command_type::BACKSPACE)
         {
             mutx_fle_editr_.lock();
             fle_editr_.handle_command(tcp_seg.dat.editr_cmd.lid,
                                       tcp_seg.dat.editr_cmd.loffset,
-                                      tcp_seg.dat.editr_cmd.cmd);
+                                      tcp_seg.dat.editr_cmd.cmd,
+                                      tcp_seg.dat.editr_cmd.ch);
             interf_.print();
             mutx_fle_editr_.unlock();
         }

@@ -52,10 +52,21 @@ public:
     
     void join();
     
+    inline bool is_finish() const noexcept
+    {
+        return finsh_;
+    }
+    
 private:
     void thread_execute();
     
-    void manage_request(client_data& client_dat);
+    vector_type<client_data>::iterator manage_request(
+            vector_type<client_data>::iterator it_client
+    );
+    
+    vector_type<client_data>::iterator remove_client(
+            vector_type<client_data>::iterator it_client
+    );
 
 private:
     file_editor_type fle_editr_;
@@ -67,6 +78,8 @@ private:
     std::thread thrd_;
     
     std::mutex mutx_clients_dat_;
+    
+    bool finsh_;
 };
 
 

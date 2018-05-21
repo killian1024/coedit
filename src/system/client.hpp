@@ -44,14 +44,18 @@ public:
     
     client(const char* serv_addr, std::uint16_t port_nbr_, path_type fle_path);
     
+    ~client();
+    
     int execute();
 
 private:
     void connect_to_server();
     
+    void disconnect_to_server();
+    
     void get_file_data_from_server();
     
-    bool send_command(file_editor_command_type cmd);
+    bool send_command(file_editor_command_type cmd, char_type ch);
     
     void recieve_commands();
 
@@ -71,6 +75,8 @@ private:
     std::mutex mutx_fle_editr_;
     
     bool execution_finish_;
+    
+    bool connectd_;
 };
 
 

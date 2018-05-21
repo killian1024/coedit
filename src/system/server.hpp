@@ -18,6 +18,8 @@
 
 #include <cstring>
 #include <filesystem>
+#include <mutex>
+#include <thread>
 
 #include "../core/basic_file_editor.hpp"
 #include "client_data.hpp"
@@ -46,6 +48,8 @@ public:
 private:
     void add_client();
     
+    void remove_sessions();
+    
     bool server_session_exists(const path_type& fle_path) const noexcept;
     
     server_session& get_server_session(const path_type& fle_path);
@@ -58,6 +62,10 @@ private:
     std::uint16_t port_nbr_;
     
     vector_type<server_session*> sessions_;
+    
+    std::thread thrd_;
+    
+    std::mutex mutx_sessions_;
     
     bool execution_finish_;
 };

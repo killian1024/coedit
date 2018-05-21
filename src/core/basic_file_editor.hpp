@@ -549,43 +549,22 @@ public:
         return false;
     }
     
-    bool handle_command(lid_t lid, loffset_t loffset, file_editor_command cmd)
+    bool handle_command(lid_t lid, loffset_t loffset, file_editor_command cmd, char_type ch)
     {
-        //cur_lid_ = first_lid_;
-        //first_term_lid_ = first_lid_;
-        //cursor_pos_ = {0, 0};
-        //iterte_in_lazy_term_ = true;
-        //needs_refresh_ = true;
-        //reset_first_lazy_terminal_position();
-        
         if (lid == cur_lid_)
         {
-            if (cmd <= file_editor_command::MAX)
-            {
-                handle_command(cmd);
-            }
-            else
-            {
-                insert_character((char_type)cmd);
-            }
+            handle_command(cmd, ch);
         }
         else
         {
             lid_t old_cur_lid = cur_lid_;
             lid_t old_first_term_lid = first_term_lid_;
             cursor_position old_cursor_pos = cursor_pos_;
-    
+            
             cur_lid_ = lid;
             cursor_pos_.loffset = loffset;
-    
-            if (cmd <= file_editor_command::MAX)
-            {
-                handle_command(cmd);
-            }
-            else
-            {
-                insert_character((char_type)cmd);
-            }
+            
+            handle_command(cmd, ch);
             
             cur_lid_ = old_cur_lid;
             first_term_lid_ = old_first_term_lid;
@@ -593,6 +572,33 @@ public:
             needs_refresh_ = true;
         }
     
+        return true;
+    }
+    
+    // TODO(killian.poulaud@etu.upmc.fr): Delete this method, this is just a quick work around.
+    bool insert_character(char_type ch, lid_t new_lid)
+    {
+        if (ch == '\0')
+        {
+            return false;
+        }
+        
+        if (ch == LF || ch == CR)
+        {
+            handle_newline(new_lid);
+        }
+        else
+        {
+            line_type& current_lne = lne_cache_.get_line(cur_lid_);
+            current_lne.insert_character(ch, cursor_pos_.loffset);
+            
+            update_first_lazy_terminal_position_by_cursor();
+            
+            ++cursor_pos_.loffset;
+        }
+        
+        needs_refresh_ = true;
+        
         return true;
     }
     
@@ -758,6 +764,11 @@ private:
     
     bool insert_character(char_type ch)
     {
+        if (ch == '\0')
+        {
+            return false;
+        }
+        
         if (ch == LF || ch == CR)
         {
             handle_newline();
@@ -777,54 +788,7 @@ private:
         return true;
     }
     
-    // TODO(killian.poulaud@etu.upmc.fr): Delete this method, this is just a quick work around.
-    bool insert_character(char_type ch, lid_t new_lid)
-    {
-        if (ch == LF || ch == CR)
-        {
-            handle_newline(new_lid);
-        }
-        else
-        {
-            line_type& current_lne = lne_cache_.get_line(cur_lid_);
-            current_lne.insert_character(ch, cursor_pos_.loffset);
-            
-            update_first_lazy_terminal_position_by_cursor();
-            
-            ++cursor_pos_.loffset;
-        }
-        
-        needs_refresh_ = true;
-        
-        return true;
-    }
-    
-    bool handle_newline()
-    {
-        std::size_t cur_n_digits;
-        std::size_t new_n_digits;
-        
-        lne_cache_.insert_line_after(cur_lid_, cursor_pos_.loffset, newl_format_);
-    
-        cur_n_digits = kscalars::get_n_digits(n_lnes_);
-        ++n_lnes_;
-        new_n_digits = kscalars::get_n_digits(n_lnes_);
-        if (cur_n_digits != new_n_digits)
-        {
-            reset_first_lazy_terminal_position();
-        }
-    
-        update_first_lazy_terminal_position_by_cursor();
-        iterte_in_lazy_term_ = true;
-        needs_refresh_ = true;
-        
-        handle_go_down();
-        handle_home();
-        
-        return true;
-    }
-    
-    bool handle_newline(lid_t new_lid)
+    bool handle_newline(lid_t new_lid = EMPTY)
     {
         std::size_t cur_n_digits;
         std::size_t new_n_digits;

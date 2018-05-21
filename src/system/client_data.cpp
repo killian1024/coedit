@@ -14,7 +14,7 @@ std::ostream& operator <<(std::ostream& os, const client_data& client_dat)
     char host_name[128] = {0};
     
     if (getnameinfo((sockaddr*)&client_dat.get_address(), sizeof(client_dat.get_address()),
-                    host_name, sizeof(host_name), nullptr, 0, 0) != 0)
+                    host_name, sizeof(host_name) - 1, nullptr, 0, 0) != 0)
     {
         strcpy(host_name, "??????");
     }

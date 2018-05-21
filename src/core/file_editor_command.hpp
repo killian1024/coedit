@@ -12,7 +12,8 @@ namespace core {
 
 enum class file_editor_command : std::uint32_t
 {
-    NIL = 0,
+    NIL,
+    INSERT,
     NEWLINE,
     BACKSPACE,
     GO_LEFT,
@@ -25,7 +26,6 @@ enum class file_editor_command : std::uint32_t
     CTRL_END,
     SAVE_FILE,
     EXIT,
-    MAX = 31
 };
 
 

@@ -505,10 +505,13 @@ public:
         return lazy_terminal_iterator();
     }
     
-    bool handle_command(file_editor_command cmd)
+    bool handle_command(file_editor_command cmd, char_type ch = '\0')
     {
         switch (cmd)
         {
+            case file_editor_command::INSERT:
+                return insert_character(ch);
+            
             case file_editor_command::NEWLINE:
                 return handle_newline();
                 
@@ -591,45 +594,6 @@ public:
         }
     
         return true;
-    }
-    
-    void insert_character(char_type ch)
-    {
-        if (ch == LF || ch == CR)
-        {
-            handle_newline();
-        }
-        else
-        {
-            line_type& current_lne = lne_cache_.get_line(cur_lid_);
-            current_lne.insert_character(ch, cursor_pos_.loffset);
-    
-            update_first_lazy_terminal_position_by_cursor();
-            
-            ++cursor_pos_.loffset;
-        }
-        
-        needs_refresh_ = true;
-    }
-    
-    // TODO(killian.poulaud@etu.upmc.fr): Delete this method, this is just a quick work around.
-    void insert_character(char_type ch, lid_t new_lid)
-    {
-        if (ch == LF || ch == CR)
-        {
-            handle_newline(new_lid);
-        }
-        else
-        {
-            line_type& current_lne = lne_cache_.get_line(cur_lid_);
-            current_lne.insert_character(ch, cursor_pos_.loffset);
-            
-            update_first_lazy_terminal_position_by_cursor();
-            
-            ++cursor_pos_.loffset;
-        }
-        
-        needs_refresh_ = true;
     }
     
     inline bool is_file_loaded() const noexcept
@@ -757,7 +721,7 @@ private:
             {
                 for (auto& ch : lne)
                 {
-                    ofs.write((const char*)&ch, 1);
+                    ofs.write((const char*)&ch, 1); // Do what ever you want with 'ch'.
                 }
                 
                 if (lne.get_next() != EMPTY)
@@ -790,6 +754,49 @@ private:
         }
         
         return false;
+    }
+    
+    bool insert_character(char_type ch)
+    {
+        if (ch == LF || ch == CR)
+        {
+            handle_newline();
+        }
+        else
+        {
+            line_type& current_lne = lne_cache_.get_line(cur_lid_);
+            current_lne.insert_character(ch, cursor_pos_.loffset);
+            
+            update_first_lazy_terminal_position_by_cursor();
+            
+            ++cursor_pos_.loffset;
+        }
+        
+        needs_refresh_ = true;
+        
+        return true;
+    }
+    
+    // TODO(killian.poulaud@etu.upmc.fr): Delete this method, this is just a quick work around.
+    bool insert_character(char_type ch, lid_t new_lid)
+    {
+        if (ch == LF || ch == CR)
+        {
+            handle_newline(new_lid);
+        }
+        else
+        {
+            line_type& current_lne = lne_cache_.get_line(cur_lid_);
+            current_lne.insert_character(ch, cursor_pos_.loffset);
+            
+            update_first_lazy_terminal_position_by_cursor();
+            
+            ++cursor_pos_.loffset;
+        }
+        
+        needs_refresh_ = true;
+        
+        return true;
     }
     
     bool handle_newline()

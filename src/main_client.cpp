@@ -11,7 +11,8 @@ int main(int argc, char* argv[])
 {
     try
     {
-        coedit::system::client clint("127.0.0.1", 30050, std::filesystem::path("/media/HDD1/home/dragonfly/Desktop/file.c"));
+        coedit::system::client clint("127.0.0.1", 30050, std::filesystem::path(
+                "/media/HDD1/home/dragonfly/Desktop/file.c"));
     
         return clint.execute();
     }

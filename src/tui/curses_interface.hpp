@@ -23,6 +23,8 @@ namespace tui {
 class curses_interface
 {
 public:
+    using char_type = core::file_editor::char_type;
+    
     using file_editor_type = core::file_editor;
     
     using file_editor_command_type = core::file_editor_command;
@@ -35,7 +37,7 @@ public:
     
     void free();
     
-    file_editor_command_type get_command();
+    bool get_command(file_editor_command_type* cmd, char_type* ch);
     
     void print();
 

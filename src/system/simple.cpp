@@ -19,6 +19,7 @@ simple::simple(std::filesystem::path fle_path)
 int simple::execute()
 {
     file_editor_command_type cmd;
+    char_type ch;
     bool execution_finish = false;
     
     interf_.init();
@@ -27,19 +28,15 @@ int simple::execute()
     {
         interf_.print();
         
-        if ((cmd = interf_.get_command()) != file_editor_command_type::NIL)
+        if (interf_.get_command(&cmd, &ch), cmd != file_editor_command_type::NIL)
         {
             if (cmd == file_editor_command_type::EXIT)
             {
                 execution_finish = true;
             }
-            else if (cmd <= file_editor_command_type::MAX)
-            {
-                file_editr_.handle_command(cmd);
-            }
             else
             {
-                file_editr_.insert_character((char_type)cmd);
+                file_editr_.handle_command(cmd, ch);
             }
         }
     }

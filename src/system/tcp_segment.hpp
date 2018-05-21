@@ -64,6 +64,8 @@ struct tcp_segment_data
     
             core::file_editor_command cmd;
             
+            core::file_editor::char_type ch;
+            
         } editr_cmd;
         
     } dat;

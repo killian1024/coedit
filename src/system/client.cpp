@@ -34,6 +34,7 @@ client::client(const char* serv_addr, std::uint16_t port_nbr_, path_type fle_pat
 int client::execute()
 {
     file_editor_command_type cmd;
+    char_type ch;
     
     connect_to_server();
     get_file_data_from_server();
@@ -45,7 +46,7 @@ int client::execute()
     
     while (!execution_finish_)
     {
-        if ((cmd = interf_.get_command()) != file_editor_command_type::NIL)
+        if (interf_.get_command(&cmd, &ch), cmd != file_editor_command_type::NIL)
         {
             if (cmd == file_editor_command_type::EXIT)
             {
@@ -119,7 +120,7 @@ void client::get_file_data_from_server()
             {
                 if (dat[i] != 0)
                 {
-                    fle_editr_.insert_character(dat[i]);
+                    fle_editr_.handle_command(file_editor_command_type::INSERT, dat[i]);
                 }
                 else
                 {

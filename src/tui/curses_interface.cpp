@@ -91,9 +91,8 @@ void curses_interface::free()
 }
 
 
-curses_interface::file_editor_command_type curses_interface::get_command()
+bool curses_interface::get_command(file_editor_command_type* cmd, char_type* ch)
 {
-    file_editor_command_type cmd = file_editor_command_type::NIL;
     int inpt;
     core::coffset_t term_y_sze;
     core::loffset_t term_x_sze;
@@ -105,11 +104,11 @@ curses_interface::file_editor_command_type curses_interface::get_command()
         switch (inpt)
         {
             case ERR:
-                cmd = file_editor_command_type::NIL;
+                *cmd = file_editor_command_type::NIL;
                 break;
             
             case 27:
-                cmd = file_editor_command_type::EXIT;
+                *cmd = file_editor_command_type::EXIT;
                 break;
             
             case KEY_RESIZE:
@@ -119,53 +118,54 @@ curses_interface::file_editor_command_type curses_interface::get_command()
             
             case 10:
             case KEY_ENTER:
-                cmd = file_editor_command_type::NEWLINE;
+                *cmd = file_editor_command_type::NEWLINE;
                 break;
             
             case KEY_BACKSPACE:
-                cmd = file_editor_command_type::BACKSPACE;
+                *cmd = file_editor_command_type::BACKSPACE;
                 break;
             
             case KEY_LEFT:
-                cmd = file_editor_command_type::GO_LEFT;
+                *cmd = file_editor_command_type::GO_LEFT;
                 break;
             
             case KEY_RIGHT:
-                cmd = file_editor_command_type::GO_RIGHT;
+                *cmd = file_editor_command_type::GO_RIGHT;
                 break;
             
             case KEY_UP:
-                cmd = file_editor_command_type::GO_UP;
+                *cmd = file_editor_command_type::GO_UP;
                 break;
             
             case KEY_DOWN:
-                cmd = file_editor_command_type::GO_DOWN;
+                *cmd = file_editor_command_type::GO_DOWN;
                 break;
             
             case KEY_HOME:
-                cmd = file_editor_command_type::HOME;
+                *cmd = file_editor_command_type::HOME;
                 break;
             
             case KEY_END:
-                cmd = file_editor_command_type::END;
+                *cmd = file_editor_command_type::END;
                 break;
     
             case 447:
-                cmd = file_editor_command_type::CTRL_HOME;
+                *cmd = file_editor_command_type::CTRL_HOME;
                 break;
             
             case CTRL('s'):
-                cmd = file_editor_command_type::SAVE_FILE;
+                *cmd = file_editor_command_type::SAVE_FILE;
                 break;
             
             default:
-                cmd = (file_editor_command_type)inpt;
+                *cmd = file_editor_command_type::INSERT;
+                *ch = static_cast<char_type>(inpt);
                 break;
         }
         
     } while (inpt == KEY_RESIZE);
     
-    return cmd;
+    return true;
 }
 
 

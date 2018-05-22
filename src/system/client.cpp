@@ -74,6 +74,8 @@ int client::execute()
         }
     }
     
+    thrd_.join();
+    
     interf_.free();
     
     return 0;

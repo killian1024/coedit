@@ -1,6 +1,6 @@
 ### coedit ###
 
-Project in development.
+Cooperative text editor. Project in development.
 
 ### Build ###
 
